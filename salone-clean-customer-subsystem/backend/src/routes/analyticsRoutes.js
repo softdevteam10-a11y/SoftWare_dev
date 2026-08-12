@@ -6,12 +6,8 @@ const db = require('../db'); // path to your database connection module
 router.get('/aggregate', async (req, res) => {
   try {
     const tokenResult = await db.query('SELECT COALESCE(SUM(quantity), 0)::int AS total_tokens FROM transactions WHERE status = $1', ['completed']);
-    const customerResult = await db.query('SELECT COUNT(*)::int AS total_customers FROM customers');
+    const customerResult = await db.query('SELECT COUNT(*)::int AS total_customers FROM customer_subscriptions');
 
-   // Updated to match your exact Neon table name: customer_subscriptions
-    const customerResult = await db.query(
-      `SELECT COUNT(*)::int AS total_customers FROM customer_subscriptions`
-    );
 
 
     res.json({
