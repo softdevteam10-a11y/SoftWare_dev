@@ -459,6 +459,9 @@ async function loadAnalytics() {
     const data = await api('/analytics/overview');
     const unavailableBanner = $('#analytics-unavailable');
 
+    const kpis = data.kpis || {};
+    const tokensByNeighborhood = data.tokens_by_neighborhood || [];
+
     if (!data.available) {
       unavailableBanner.classList.remove('hidden');
       $('#analytics-unavailable-detail').textContent = data.gateway_error ? `(${data.gateway_error})` : '';
@@ -473,7 +476,6 @@ async function loadAnalytics() {
 
     const chart = $('#volume-chart');
     const empty = $('#volume-chart-empty');
-    const tokensByNeighborhood = data.tokens_by_neighborhood || [];
 
   if (!tokensByNeighborhood.length) {
     chart.innerHTML = '';

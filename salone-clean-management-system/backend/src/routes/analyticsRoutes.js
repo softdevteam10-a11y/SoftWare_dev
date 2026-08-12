@@ -57,8 +57,7 @@ router.get('/overview', async (req, res) => {
       pending_or_failed_transactions: { value: available ? customerSummary.pending_or_failed_transactions : null },
       compliance_log_entries: { value: complianceLogCount }
     },
-    neighborhoods: customerSummary?.neighborhoods || [],
-    recent_logs: customerSummary?.recent_logs || []
+    tokens_by_neighborhood: customerSummary?.tokens_by_neighborhood || customerSummary?.neighborhoods || []
   });
 });
 
