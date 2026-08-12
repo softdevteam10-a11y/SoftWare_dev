@@ -26,6 +26,13 @@ app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/purchases', purchaseRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 
+
+const analyticsRoutes = require('./routes/analyticsRoutes');
+
+// Mount under /api/v1/analytics
+app.use('/api/v1/analytics', analyticsRoutes);
+
+
 // --- 404 fallback ------------------------------------------------------------
 app.use((req, res) => {
   return sendError(res, { statusCode: 404, code: 'NOT_FOUND', message: `No route for ${req.method} ${req.originalUrl}` });
