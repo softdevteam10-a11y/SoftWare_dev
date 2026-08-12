@@ -18,7 +18,7 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || 'https://gateway.saloneclean.sl/api/v1';
+const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || 'https://salone-clean-customer-backend.onrender.com/api/v1'; // Default to the deployed Customer Subsystem if not set
 
 /**
  * GET /api/v1/analytics/overview
