@@ -29,9 +29,6 @@ app.use('/api/v1/compliance', complianceRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/fleet', fleetRoutes);
 
-const neighborhoods = data.neighborhoods || [];
-const count = neighborhoods.length;
-
 // --- 404 fallback ------------------------------------------------------------
 app.use((req, res) => {
   return sendError(res, { statusCode: 404, code: 'NOT_FOUND', message: `No route for ${req.method} ${req.originalUrl}` });

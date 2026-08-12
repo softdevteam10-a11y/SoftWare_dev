@@ -466,22 +466,25 @@ async function loadAnalytics() {
       unavailableBanner.classList.add('hidden');
     }
 
-    $('#kpi-tokens').textContent = data.kpis.total_tokens_redeemed.value ?? '—';
-    $('#kpi-customers').textContent = data.kpis.total_registered_customers.value ?? '—';
-    $('#kpi-exceptions').textContent = data.kpis.pending_or_failed_transactions.value ?? '—';
-    $('#kpi-compliance').textContent = data.kpis.compliance_log_entries.value;
+    $('#kpi-tokens').textContent = data.kpis?.total_tokens_redeemed?.value ?? '-';
+    $('#kpi-customers').textContent = data.kpis?.total_registered_customers?.value ?? '-';
+    $('#kpi-exceptions').textContent = data.kpis?.pending_or_failed_transactions?.value ?? '-';
+    $('#kpi-compliance').textContent = data.kpis?.compliance_log_entries?.value ?? '-';
 
     const chart = $('#volume-chart');
     const empty = $('#volume-chart-empty');
-    if (!data.tokens_by_neighborhood.length) {
-      chart.innerHTML = '';
-      empty.classList.remove('hidden');
-      return;
-    }
-    empty.classList.add('hidden');
+    const tokensByNeighborhood = data.tokens_by_neighborhood || [];
 
-    const max = Math.max(1, ...data.tokens_by_neighborhood.map(v => v.tokens));
-    chart.innerHTML = data.tokens_by_neighborhood.map(v => `
+  if (!tokensByNeighborhood.length) {
+    chart.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+
+  const max = Math.max(1, ...tokensByNeighborhood.map(v => v.tokens));
+      chart.innerHTML = data.tokens_by_neighborhood.map(v => `
       <div>
         <div class="flex items-center justify-between text-xs mb-1">
           <span class="font-medium">${v.neighborhood}</span>

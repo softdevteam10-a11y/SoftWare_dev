@@ -45,38 +45,20 @@ router.get('/overview', async (req, res) => {
     gatewayError = err.message;
   }
 
-  // Inside analyticsRoutes.js router.get('/overview', ...)
-
-  res.json({
-    success: true,
-    data: {
-      available: !gatewayError,
-      gateway_error: gatewayError,
-      compliance_count: complianceLogCount,
-      // Ensure all array properties fall back to empty arrays []
-      total_tokens_redeemed: customersSummary?.total_tokens_redeemed ?? 0,
-      total_registered_customers: customersSummary?.total_registered_customers ?? 0,
-      neighborhoods: customersSummary?.neighborhoods || [],
-      recent_logs: customersSummary?.recent_logs || []
-    }
-  });
-
   
   const available = customerSummary !== null;
 
   return sendSuccess(res, {
-    data: {
-      available, // false means the cards below should show an "unavailable" state, not a guess
-      gateway_error: gatewayError,
-      kpis: {
-        total_tokens_redeemed: { value: available ? customerSummary.total_tokens_redeemed : null },
-        total_registered_customers: { value: available ? customerSummary.total_customers : null },
-        pending_or_failed_transactions: { value: available ? customerSummary.pending_or_failed_transactions : null },
-        compliance_log_entries: { value: complianceLogCount },
-      },
-      tokens_by_neighborhood: available ? customerSummary.tokens_by_neighborhood : [],
-      currency: 'SLE',
+    available, // false means the cards below should show an "unavailable" state
+    gateway_error: gatewayError,
+    kpis: {
+      total_tokens_redeemed: { value: available ? customerSummary.total_tokens_redeemed : null },
+      total_registered_customers: { value: available ? customerSummary.total_customers : null },
+      pending_or_failed_transactions: { value: available ? customerSummary.pending_or_failed_transactions : null },
+      compliance_log_entries: { value: complianceLogCount }
     },
+    neighborhoods: customerSummary?.neighborhoods || [],
+    recent_logs: customerSummary?.recent_logs || []
   });
 });
 
