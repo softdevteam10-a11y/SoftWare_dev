@@ -45,6 +45,23 @@ router.get('/overview', async (req, res) => {
     gatewayError = err.message;
   }
 
+  // Inside analyticsRoutes.js router.get('/overview', ...)
+
+  res.json({
+    success: true,
+    data: {
+      available: !gatewayError,
+      gateway_error: gatewayError,
+      compliance_count: complianceLogCount,
+      // Ensure all array properties fall back to empty arrays []
+      total_tokens_redeemed: customersSummary?.total_tokens_redeemed ?? 0,
+      total_registered_customers: customersSummary?.total_registered_customers ?? 0,
+      neighborhoods: customersSummary?.neighborhoods || [],
+      recent_logs: customersSummary?.recent_logs || []
+    }
+  });
+
+  
   const available = customerSummary !== null;
 
   return sendSuccess(res, {
