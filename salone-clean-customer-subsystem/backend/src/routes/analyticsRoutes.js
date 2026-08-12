@@ -1,17 +1,12 @@
+const express = require('express');
+const router = express.Router();
+const db = require('../db'); // path to your database connection module
+
 // GET /api/v1/analytics/aggregate
 router.get('/aggregate', async (req, res) => {
   try {
-    const tokenResult = await db.query(
-      `SELECT COALESCE(SUM(quantity), 0)::int AS total_tokens 
-       FROM customer_transactions 
-       WHERE status = $1`, 
-      ['completed']
-    );
-    
-    // Update 'customer_profiles' to match your exact Neon table name
-    const customerResult = await db.query(
-      `SELECT COUNT(*)::int AS total_customers FROM customer_subcriptions`
-    );
+    const tokenResult = await db.query('SELECT COALESCE(SUM(quantity), 0)::int AS total_tokens FROM transactions WHERE status = $1', ['completed']);
+    const customerResult = await db.query('SELECT COUNT(*)::int AS total_customers FROM customers');
 
     res.json({
       success: true,
@@ -27,3 +22,5 @@ router.get('/aggregate', async (req, res) => {
     });
   }
 });
+
+module.exports = router;
