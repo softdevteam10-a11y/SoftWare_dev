@@ -383,7 +383,16 @@
 // the backend is the one that reaches the API Gateway for any dispatch.
 // ============================================================================
 
-const API_BASE_URL = 'https://salone-clean-management-backend.onrender.com';
+// 1. Define your backend base URL in one central place
+const API_BASE_URL = 'https://salone-clean-management-backend.onrender.com/api';
+
+// 2. Helper function to ensure all endpoints use the correct base URL
+async function apiFetch(endpoint, options = {}) {
+  // Automatically prepends /api and strips double slashes if needed
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, options);
+  return response;
+}
 
 // In-memory-only session state (no localStorage — see Customer Subsystem
 // frontend for the same note). A production build would use a real admin
