@@ -1,0 +1,18 @@
+{
+  "name": "salone-clean-driver-subsystem",
+  "version": "1.0.0",
+  "description": "Standalone Driver Subsystem for Salone Clean — field-facing route/task API for collection crews. Owns its own database and reaches the Customer/Management subsystems only through the API Gateway.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.12.0"
+  }
+}

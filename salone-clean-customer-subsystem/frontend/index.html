@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Salone Clean · Customer Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F7F0;
+    --surface:#FFFFFF;
+    --ink:#152219;
+    --ink-soft:#4B5A50;
+    --primary:#0F5132;
+    --primary-dark:#0B3B24;
+    --leaf:#4C9A63;
+    --gold:#F2B705;
+    --gold-dark:#B98304;
+    --teal:#1C6E8C;
+    --danger:#C0392B;
+    --border:#DFE7DA;
+  }
+  *{ -webkit-tap-highlight-color: transparent; }
+  html,body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; }
+  .font-display{ font-family:'Space Grotesk',sans-serif; }
+  .font-mono{ font-family:'IBM Plex Mono',monospace; }
+
+  /* Subtle waste-route texture in the header: dotted collection-route line */
+  .route-texture{
+    background-image: radial-gradient(circle, rgba(255,255,255,0.25) 1.5px, transparent 1.5px);
+    background-size: 14px 14px;
+  }
+
+  .app-shell, .auth-shell{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    background: var(--bg);
+    position: relative;
+    box-shadow: 0 0 60px rgba(15,81,50,0.08);
+  }
+
+  .panel{ display:none; }
+  .panel.active{ display:block; animation: fadeUp .25s ease; }
+  .auth-view{ display:none; }
+  .auth-view.active{ display:block; animation: fadeUp .25s ease; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .tab-btn{ color:#9AAA9F; transition: color .15s ease, transform .15s ease; }
+  .tab-btn.active{ color:var(--primary); }
+  .tab-btn.active .tab-dot{ opacity:1; transform:scale(1); }
+  .tab-dot{ opacity:0; transform:scale(0); transition: all .15s ease; }
+
+  .auth-tab{ color:var(--ink-soft); transition: background .15s ease, color .15s ease; }
+  .auth-tab.active{ background:var(--surface); color:var(--primary); box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+
+  .field-input{
+    background:var(--surface);
+    border:1.5px solid var(--border);
+    color:var(--ink);
+  }
+  .field-input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(15,81,50,0.12); }
+
+  .tier-card{ border:1.5px solid var(--border); background:var(--surface); transition: border-color .15s ease, background .15s ease; }
+  .tier-card.selected{ border-color:var(--primary); background:#F0F8F1; }
+  .tier-card:focus-within{ box-shadow:0 0 0 3px rgba(15,81,50,0.12); }
+
+  .provider-card{ border:1.5px solid var(--border); background:var(--surface); }
+  .provider-card.selected{ border-color:var(--teal); background:#EEF6F9; }
+
+  .coin{
+    background: radial-gradient(circle at 32% 28%, #FFE79A, var(--gold) 70%);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.15);
+  }
+
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-primary:hover{ background:var(--primary-dark); }
+  .btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
+
+  .status-pill{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.02em; padding:2px 8px; border-radius:999px; }
+  .status-completed{ background:#E4F3E7; color:#1F7A3D; }
+  .status-processing{ background:#FFF3D6; color:#9A6B00; }
+  .status-pending{ background:#EEF2EE; color:#5A6A5E; }
+  .status-failed{ background:#FBE7E4; color:#B23A26; }
+
+  #signature-pad{ touch-action:none; background:#fff; }
+
+  .toast{ transform: translateY(120%); transition: transform .25s ease; }
+  .toast.show{ transform: translateY(0); }
+
+  ::-webkit-scrollbar{ width:0; height:0; }
+</style>
+</head>
+<body>
+
+<!-- ============================= AUTH GATE (first screen) ============================= -->
+<!-- Nothing else in the app is reachable until state.subscription is set via
+     login or registration — see switchApp() in the script below. -->
+<div id="auth-shell" class="auth-shell flex flex-col">
+  <header class="route-texture" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+    <div class="px-5 pt-12 pb-10 flex flex-col items-center text-center gap-3">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C7 6 4 10.5 4 14.5C4 18.6 7.6 22 12 22C16.4 22 20 18.6 20 14.5C20 10.5 17 6 12 2Z" fill="#F2B705"/>
+          <path d="M8.5 14.5C8.5 12 10 9.8 12 8" stroke="#0F5132" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="font-display text-white text-xl font-semibold leading-tight">Salone Clean</h1>
+        <p class="text-[12px] leading-tight mt-1" style="color:rgba(255,255,255,0.75)">Customer Portal · Freetown</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 px-5 pt-6 pb-10">
+    <div class="flex rounded-xl p-1 mb-6" style="background:#E7EFE4;">
+      <button id="auth-tab-login" class="auth-tab flex-1 py-2.5 rounded-lg text-sm font-display font-semibold active">Log In</button>
+      <button id="auth-tab-register" class="auth-tab flex-1 py-2.5 rounded-lg text-sm font-display font-semibold">Create Account</button>
+    </div>
+
+    <!-- ============================= LOGIN ============================= -->
+    <div id="auth-view-login" class="auth-view active">
+      <h2 class="font-display text-lg font-semibold mb-1">Welcome back</h2>
+      <p class="text-sm mb-5" style="color:var(--ink-soft)">Log in with your phone number and PIN.</p>
+
+      <form id="login-form" class="space-y-4" novalidate>
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Phone number</label>
+          <input type="tel" name="phone_number" required placeholder="+232 76 000 000"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono" />
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">4-digit PIN</label>
+          <input type="password" name="pin" required inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em]" />
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+        <button type="submit" id="login-submit" class="btn-primary w-full rounded-xl py-3.5 font-display font-semibold text-sm mt-2">
+          Log In
+        </button>
+        <p id="login-feedback" class="text-sm text-center hidden"></p>
+      </form>
+
+      <p class="text-xs text-center mt-5" style="color:var(--ink-soft)">
+        New to Salone Clean?
+        <button id="goto-register" class="font-semibold underline" style="color:var(--primary)">Create an account</button>
+      </p>
+    </div>
+
+    <!-- ============================= REGISTER ============================= -->
+    <div id="auth-view-register" class="auth-view">
+      <h2 class="font-display text-lg font-semibold mb-1">Set up your account</h2>
+      <p class="text-sm mb-5" style="color:var(--ink-soft)">Register once — collection crews use this address to find your bin.</p>
+
+      <form id="register-form" class="space-y-4" novalidate>
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Full name</label>
+          <input type="text" name="full_name" required minlength="2" placeholder="e.g. Fatmata Kamara"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm" />
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Primary phone number</label>
+          <input type="tel" name="phone_number" required placeholder="+232 76 000 000"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono" />
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Email address <span class="normal-case font-normal">(optional)</span></label>
+          <input type="email" name="email_address" placeholder="you@example.com"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm" />
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Neighborhood</label>
+          <select name="neighborhood_tag" required class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm">
+            <option value="" disabled selected>Select your area</option>
+          </select>
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Street address / landmarks</label>
+          <textarea name="street_address" required minlength="5" rows="3" placeholder="House number, street, nearby landmark to help the crew find you"
+            class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm resize-none"></textarea>
+          <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Create a 4-digit PIN</label>
+            <input type="password" name="pin" required inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••"
+              class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em]" />
+            <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Confirm PIN</label>
+            <input type="password" name="pin_confirm" required inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••"
+              class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em]" />
+            <p class="field-error text-xs mt-1 hidden" style="color:var(--danger)"></p>
+          </div>
+        </div>
+        <p class="text-xs -mt-2" style="color:var(--ink-soft)">You'll use your phone number + this PIN to log back in next time.</p>
+
+        <!-- Signature verification block -->
+        <div>
+          <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Signature verification</label>
+          <div class="mt-1 rounded-xl border-1.5 overflow-hidden" style="border:1.5px solid var(--border);">
+            <canvas id="signature-pad" width="400" height="140" class="w-full block" style="height:140px;"></canvas>
+            <div class="flex items-center justify-between px-3 py-2" style="background:#F7F9F6; border-top:1.5px solid var(--border);">
+              <button type="button" id="sig-clear" class="text-xs font-medium" style="color:var(--ink-soft)">Clear</button>
+              <button type="button" id="sig-verify-tap" class="text-xs font-medium px-3 py-1.5 rounded-full" style="background:#EEF6F9; color:var(--teal);">✓ Verify by tap instead</button>
+            </div>
+          </div>
+          <p id="sig-status" class="text-xs mt-1" style="color:var(--ink-soft)">Draw your signature above, or use tap-to-verify.</p>
+        </div>
+
+        <button type="submit" id="register-submit" class="btn-primary w-full rounded-xl py-3.5 font-display font-semibold text-sm mt-2">
+          Save &amp; Register Profile
+        </button>
+        <p id="register-feedback" class="text-sm text-center hidden"></p>
+      </form>
+
+      <p class="text-xs text-center mt-5" style="color:var(--ink-soft)">
+        Already registered?
+        <button id="goto-login" class="font-semibold underline" style="color:var(--primary)">Log in instead</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= MAIN APP (hidden until logged in) ============================= -->
+<div id="app-shell" class="app-shell hidden flex-col pb-24">
+
+  <header class="route-texture" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+    <div class="px-5 pt-6 pb-5 flex items-center gap-3">
+      <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C7 6 4 10.5 4 14.5C4 18.6 7.6 22 12 22C16.4 22 20 18.6 20 14.5C20 10.5 17 6 12 2Z" fill="#F2B705"/>
+          <path d="M8.5 14.5C8.5 12 10 9.8 12 8" stroke="#0F5132" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="font-display text-white text-lg font-semibold leading-tight">Salone Clean</h1>
+        <p id="header-name" class="text-[12px] leading-tight" style="color:rgba(255,255,255,0.75)">Customer Portal · Freetown</p>
+      </div>
+      <div class="ml-auto text-right flex items-center gap-3">
+        <div>
+          <p class="text-[10px] uppercase tracking-wide" style="color:rgba(255,255,255,0.6)">Token Balance</p>
+          <p id="header-balance" class="font-mono text-white text-base font-semibold">—</p>
+        </div>
+        <button id="logout-btn" title="Log out" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================= PANEL: PURCHASE HUB ============================= -->
+  <section id="panel-purchase" class="panel active px-5 pt-6">
+    <h2 class="font-display text-xl font-semibold mb-1">Buy collection tokens</h2>
+    <p class="text-sm mb-5" style="color:var(--ink-soft)">Each token redeems one bin collection. Pay by mobile money.</p>
+
+    <form id="purchase-form" class="space-y-5">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide mb-2" style="color:var(--ink-soft)">Service tier</p>
+        <div class="space-y-2" id="tier-options">
+          <!-- tier cards injected by JS -->
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Quantity</label>
+        <div class="flex items-center gap-3 mt-1">
+          <button type="button" id="qty-minus" class="w-10 h-10 rounded-xl font-display text-lg" style="background:var(--surface); border:1.5px solid var(--border);">−</button>
+          <input type="number" id="qty-input" name="quantity" value="1" min="1" step="1"
+            class="field-input flex-1 text-center rounded-xl px-4 py-2.5 text-sm font-mono" />
+          <button type="button" id="qty-plus" class="w-10 h-10 rounded-xl font-display text-lg" style="background:var(--surface); border:1.5px solid var(--border);">+</button>
+        </div>
+      </div>
+
+      <!-- Live total -->
+      <div class="rounded-xl px-4 py-4 flex items-center justify-between" style="background:var(--primary-dark);">
+        <div>
+          <p class="text-[11px] uppercase tracking-wide" style="color:rgba(255,255,255,0.65)">Total due</p>
+          <p id="total-price" class="font-mono text-white text-2xl font-semibold leading-tight">SLE 0.00</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[11px] uppercase tracking-wide" style="color:rgba(255,255,255,0.65)">Tokens</p>
+          <p id="total-tokens" class="font-mono text-white text-2xl font-semibold leading-tight">0</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-medium uppercase tracking-wide mb-2" style="color:var(--ink-soft)">Payment provider</p>
+        <div class="grid grid-cols-2 gap-3" id="provider-options">
+          <!-- provider cards injected by JS -->
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Mobile money number</label>
+        <input type="tel" id="mm-phone" placeholder="+232 76 000 000" class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono" />
+        <p class="text-xs mt-1" style="color:var(--ink-soft)">Defaults to your registered number.</p>
+      </div>
+
+      <button type="submit" id="purchase-submit" class="btn-primary w-full rounded-xl py-3.5 font-display font-semibold text-sm">
+        Process Mobile Money Payment
+      </button>
+      <p id="purchase-feedback" class="text-sm text-center hidden"></p>
+    </form>
+  </section>
+
+  <!-- ============================= PANEL: DASHBOARD / HISTORY ============================= -->
+  <section id="panel-dashboard" class="panel px-5 pt-6">
+    <h2 class="font-display text-xl font-semibold mb-1">Your dashboard</h2>
+    <p class="text-sm mb-5" style="color:var(--ink-soft)">Balance and past activity.</p>
+
+    <!-- Balance hero with coin-stack signature motif -->
+    <div class="rounded-2xl px-5 py-6 mb-6 relative overflow-hidden" style="background:linear-gradient(135deg, var(--primary), var(--primary-dark));">
+      <div class="relative z-10">
+        <p class="text-[11px] uppercase tracking-wide" style="color:rgba(255,255,255,0.65)">Active token balance</p>
+        <p id="dash-balance" class="font-mono text-white text-4xl font-bold mt-1">0</p>
+        <p id="dash-name" class="text-sm mt-2" style="color:rgba(255,255,255,0.85)">—</p>
+      </div>
+      <div class="absolute -right-2 -bottom-3 flex" aria-hidden="true">
+        <div class="coin w-14 h-14 rounded-full -mr-6"></div>
+        <div class="coin w-16 h-16 rounded-full -mr-6"></div>
+        <div class="coin w-14 h-14 rounded-full"></div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-display text-sm font-semibold uppercase tracking-wide" style="color:var(--ink-soft)">Notifications</h3>
+      <span id="notif-unread-badge" class="hidden text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full" style="background:var(--gold); color:var(--primary-dark);"></span>
+    </div>
+    <div id="notif-empty" class="text-sm text-center py-6 mb-6" style="color:var(--ink-soft)">No notifications yet — you'll see updates here once a crew collects your bin.</div>
+    <div id="notif-list" class="space-y-2 mb-6 hidden"></div>
+
+    <h3 class="font-display text-sm font-semibold mb-3 uppercase tracking-wide" style="color:var(--ink-soft)">Transaction history</h3>
+    <div id="history-empty" class="text-sm text-center py-10" style="color:var(--ink-soft)">No transactions yet.</div>
+    <div id="history-table" class="space-y-2 hidden"></div>
+  </section>
+
+</div>
+
+<!-- ============================= BOTTOM TAB NAV (hidden until logged in) ============================= -->
+<nav id="bottom-nav" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t flex" style="border-color:var(--border);">
+  <button data-tab="purchase" class="tab-btn flex-1 flex flex-col items-center gap-1 py-3 active">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 10.5c0-1.1 1-2 2.5-2s2.5.7 2.5 1.7c0 2.3-5 1.4-5 3.9 0 1 .9 1.9 2.5 1.9s2.5-.9 2.5-2"/></svg>
+    <span class="text-[11px] font-medium">Buy Tokens</span>
+    <span class="tab-dot w-1 h-1 rounded-full" style="background:var(--primary)"></span>
+  </button>
+  <button data-tab="dashboard" class="tab-btn flex-1 flex flex-col items-center gap-1 py-3 relative">
+    <span class="relative">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span id="nav-unread-dot" class="hidden absolute -top-0.5 -right-1 w-2 h-2 rounded-full" style="background:var(--danger)"></span>
+    </span>
+    <span class="text-[11px] font-medium">Dashboard</span>
+    <span class="tab-dot w-1 h-1 rounded-full" style="background:var(--primary)"></span>
+  </button>
+</nav>
+
+<!-- Toast -->
+<div id="toast" class="toast fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-[420px] px-4 py-3 rounded-xl text-sm text-white text-center z-50" style="background:var(--ink);"></div>
+
+<script>
+// ============================================================================
+// app.js (inline) — talks to the Customer Subsystem's REST API only.
+// This frontend never calls the Driver or Management subsystems directly;
+// the backend is the one that reaches the API Gateway for outbound calls.
+// ============================================================================
+
+// Point this at your deployed Customer Subsystem backend.
+const API_BASE_URL = 'http://localhost:4001/api/v1';
+
+// In-memory session state. NOTE: this demo intentionally avoids
+// localStorage/sessionStorage. For production, replace login/registration
+// with a real session (e.g. a short-lived token issued at login, kept in
+// an httpOnly cookie set by the backend) so state survives a page refresh
+// — right now, refreshing the page logs you out and returns to this gate.
+const state = {
+  subscription: null,   // the currently logged-in customer profile
+  tiers: {},             // service tier catalogue from the backend
+  selectedTier: 'small',
+  selectedProvider: 'orange_money',
+  signatureDrawn: false,
+  signatureVerifiedByTap: false,
+};
+
+// ---------------------------------------------------------------- helpers --
+function $(sel, root = document) { return root.querySelector(sel); }
+function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+
+function showToast(message, isError = false) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.style.background = isError ? 'var(--danger)' : 'var(--ink)';
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.success === false) {
+    const err = new Error(body?.error?.message || 'Request failed');
+    err.details = body?.error?.details;
+    err.code = body?.error?.code;
+    throw err;
+  }
+  return body.data;
+}
+
+function formatSLE(amount) {
+  return `SLE ${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function clearFieldErrors(form) {
+  $all('.field-error', form).forEach(el => el.classList.add('hidden'));
+  $all('.field-input', form).forEach(el => el.style.borderColor = '');
+}
+function applyFieldErrors(form, details = []) {
+  details.forEach(({ field, message }) => {
+    const input = form.querySelector(`[name="${field}"]`);
+    if (!input) return;
+    input.style.borderColor = 'var(--danger)';
+    const errorEl = input.closest('div').querySelector('.field-error');
+    if (errorEl) { errorEl.textContent = message; errorEl.classList.remove('hidden'); }
+  });
+}
+
+// ============================================================================
+// AUTH GATE — the first (and only reachable) screen until login/registration
+// ============================================================================
+function switchAuthView(view) {
+  $all('.auth-view').forEach(v => v.classList.remove('active'));
+  $(`#auth-view-${view}`).classList.add('active');
+  $all('.auth-tab').forEach(t => t.classList.remove('active'));
+  $(`#auth-tab-${view}`).classList.add('active');
+}
+$('#auth-tab-login').addEventListener('click', () => switchAuthView('login'));
+$('#auth-tab-register').addEventListener('click', () => switchAuthView('register'));
+$('#goto-register').addEventListener('click', () => switchAuthView('register'));
+$('#goto-login').addEventListener('click', () => switchAuthView('login'));
+
+/** Reveal the main app (Purchase + Dashboard) and hide the auth gate. */
+function enterApp(customer, { defaultTab = 'purchase' } = {}) {
+  state.subscription = customer;
+  $('#auth-shell').classList.add('hidden');
+  $('#app-shell').classList.remove('hidden');
+  $('#app-shell').classList.add('flex');
+  $('#bottom-nav').classList.remove('hidden');
+  $('#header-name').textContent = `${customer.full_name} · ${customer.neighborhood_tag}`;
+  $('#mm-phone').value = customer.phone_number;
+  renderBalance();
+  switchTab(defaultTab);
+  loadHistory();
+  loadNotifications();
+}
+
+/** Log out: clear in-memory state and return to the auth gate. */
+function exitApp() {
+  state.subscription = null;
+  $('#app-shell').classList.add('hidden');
+  $('#app-shell').classList.remove('flex');
+  $('#bottom-nav').classList.add('hidden');
+  $('#auth-shell').classList.remove('hidden');
+  $('#login-form').reset();
+  $('#register-form').reset();
+  switchAuthView('login');
+  showToast('Logged out.');
+}
+$('#logout-btn').addEventListener('click', exitApp);
+
+// --- Login form ---
+$('#login-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const form = evt.target;
+  clearFieldErrors(form);
+  const feedback = $('#login-feedback');
+  feedback.classList.add('hidden');
+
+  const payload = {
+    phone_number: form.phone_number.value.trim(),
+    pin: form.pin.value.trim(),
+  };
+
+  const btn = $('#login-submit');
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+
+  try {
+    const customer = await api('/customers/login', { method: 'POST', body: JSON.stringify(payload) });
+    showToast(`Welcome back, ${customer.full_name.split(' ')[0]}!`);
+    enterApp(customer, { defaultTab: 'dashboard' });
+  } catch (err) {
+    if (err.details) applyFieldErrors(form, err.details);
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    feedback.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Log In';
+  }
+});
+
+// --- Signature pad (canvas), part of the registration form ---
+const canvas = $('#signature-pad');
+const ctx = canvas.getContext('2d');
+ctx.strokeStyle = '#0F5132';
+ctx.lineWidth = 2.2;
+ctx.lineCap = 'round';
+let drawing = false;
+
+function getPos(evt) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const point = evt.touches ? evt.touches[0] : evt;
+  return { x: (point.clientX - rect.left) * scaleX, y: (point.clientY - rect.top) * scaleY };
+}
+function startDraw(evt) { drawing = true; state.signatureVerifiedByTap = false; const p = getPos(evt); ctx.beginPath(); ctx.moveTo(p.x, p.y); evt.preventDefault(); }
+function moveDraw(evt) { if (!drawing) return; const p = getPos(evt); ctx.lineTo(p.x, p.y); ctx.stroke(); state.signatureDrawn = true; $('#sig-status').textContent = 'Signature captured.'; evt.preventDefault(); }
+function endDraw() { drawing = false; }
+
+['mousedown', 'touchstart'].forEach(e => canvas.addEventListener(e, startDraw));
+['mousemove', 'touchmove'].forEach(e => canvas.addEventListener(e, moveDraw));
+['mouseup', 'mouseleave', 'touchend'].forEach(e => canvas.addEventListener(e, endDraw));
+
+$('#sig-clear').addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  state.signatureDrawn = false;
+  state.signatureVerifiedByTap = false;
+  $('#sig-status').textContent = 'Draw your signature above, or use tap-to-verify.';
+});
+$('#sig-verify-tap').addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  state.signatureDrawn = false;
+  state.signatureVerifiedByTap = true;
+  $('#sig-status').textContent = '✓ Verified by tap — no drawn signature required.';
+});
+
+async function loadNeighborhoods() {
+  const select = document.querySelector('select[name="neighborhood_tag"]');
+  const FALLBACK_NEIGHBORHOODS = [
+    'Aberdeen', 'Lumley', 'Congo Cross', 'Wilberforce', 'Hill Station',
+    'Brookfields', 'New England', 'Murray Town', 'Kissy', 'Wellington',
+    'Calaba Town', 'Goderich', 'Regent', 'Tengbeh Town', 'East End',
+  ];
+  let list = FALLBACK_NEIGHBORHOODS;
+  try {
+    list = await api('/customers/neighborhoods');
+  } catch (e) {
+    showToast(`Can't reach the backend at ${API_BASE_URL} — using an offline neighborhood list. Start the server (npm run dev) to fully connect.`, true);
+  }
+  list.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    select.appendChild(opt);
+  });
+}
+
+// --- Registration form ---
+$('#register-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const form = evt.target;
+  clearFieldErrors(form);
+  const feedback = $('#register-feedback');
+  feedback.classList.add('hidden');
+
+  if (!state.signatureDrawn && !state.signatureVerifiedByTap) {
+    $('#sig-status').textContent = 'Please sign above or tap to verify before continuing.';
+    $('#sig-status').style.color = 'var(--danger)';
+    return;
+  }
+  if (form.pin.value.trim() !== form.pin_confirm.value.trim()) {
+    applyFieldErrors(form, [{ field: 'pin_confirm', message: 'PINs do not match.' }]);
+    return;
+  }
+
+  const payload = {
+    full_name: form.full_name.value.trim(),
+    phone_number: form.phone_number.value.trim(),
+    email_address: form.email_address.value.trim() || null,
+    neighborhood_tag: form.neighborhood_tag.value,
+    street_address: form.street_address.value.trim(),
+    signature_data: state.signatureDrawn ? canvas.toDataURL('image/png') : 'verified-tap',
+    pin: form.pin.value.trim(),
+  };
+
+  const submitBtn = $('#register-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Saving…';
+
+  try {
+    const customer = await api('/customers', { method: 'POST', body: JSON.stringify(payload) });
+    showToast(`Welcome, ${customer.full_name.split(' ')[0]}! Profile registered.`);
+    enterApp(customer, { defaultTab: 'purchase' });
+  } catch (err) {
+    if (err.details) applyFieldErrors(form, err.details);
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    feedback.classList.remove('hidden');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Save & Register Profile';
+  }
+});
+
+// ============================================================================
+// MAIN APP — tab switching (only Purchase + Dashboard; auth lives above)
+// ============================================================================
+function switchTab(tab) {
+  $all('.panel').forEach(p => p.classList.remove('active'));
+  $(`#panel-${tab}`).classList.add('active');
+  $all('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+}
+$all('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// ============================================================================
+// PANEL — Tokenized Purchase Hub
+// ============================================================================
+function renderTierOptions() {
+  const container = $('#tier-options');
+  container.innerHTML = '';
+  Object.entries(state.tiers).forEach(([key, tier]) => {
+    const card = document.createElement('label');
+    card.className = `tier-card flex items-center justify-between rounded-xl px-4 py-3 cursor-pointer ${key === state.selectedTier ? 'selected' : ''}`;
+    card.dataset.tier = key;
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <input type="radio" name="service_tier" value="${key}" class="accent-[var(--primary)]" ${key === state.selectedTier ? 'checked' : ''} />
+        <div>
+          <p class="font-display text-sm font-semibold">${tier.label}</p>
+          <p class="text-xs" style="color:var(--ink-soft)">${tier.tokensPerUnit} token${tier.tokensPerUnit > 1 ? 's' : ''} per unit</p>
+        </div>
+      </div>
+      <p class="font-mono text-sm font-semibold">${formatSLE(tier.priceSLE)}</p>
+    `;
+    card.addEventListener('click', () => {
+      state.selectedTier = key;
+      $all('.tier-card').forEach(c => c.classList.toggle('selected', c.dataset.tier === key));
+      updateLiveTotal();
+    });
+    container.appendChild(card);
+  });
+}
+
+function renderProviderOptions() {
+  const providers = [
+    { key: 'orange_money', label: 'Orange Money', color: '#FF6600' },
+    { key: 'africell_money', label: 'Africell Money', color: '#7B2D8E' },
+  ];
+  const container = $('#provider-options');
+  container.innerHTML = '';
+  providers.forEach(p => {
+    const card = document.createElement('label');
+    card.className = `provider-card rounded-xl px-3 py-3 flex items-center gap-2 cursor-pointer ${p.key === state.selectedProvider ? 'selected' : ''}`;
+    card.dataset.provider = p.key;
+    card.innerHTML = `
+      <input type="radio" name="payment_provider" value="${p.key}" ${p.key === state.selectedProvider ? 'checked' : ''} />
+      <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${p.color}"></span>
+      <span class="text-xs font-medium">${p.label}</span>
+    `;
+    card.addEventListener('click', () => {
+      state.selectedProvider = p.key;
+      $all('.provider-card').forEach(c => c.classList.toggle('selected', c.dataset.provider === p.key));
+    });
+    container.appendChild(card);
+  });
+}
+
+function updateLiveTotal() {
+  const tier = state.tiers[state.selectedTier];
+  const qty = Math.max(1, parseInt($('#qty-input').value, 10) || 1);
+  if (!tier) return;
+  const tokens = tier.tokensPerUnit * qty;
+  const total = tier.priceSLE * qty;
+  $('#total-tokens').textContent = tokens;
+  $('#total-price').textContent = formatSLE(total);
+}
+
+$('#qty-minus').addEventListener('click', () => {
+  const input = $('#qty-input');
+  input.value = Math.max(1, (parseInt(input.value, 10) || 1) - 1);
+  updateLiveTotal();
+});
+$('#qty-plus').addEventListener('click', () => {
+  const input = $('#qty-input');
+  input.value = (parseInt(input.value, 10) || 1) + 1;
+  updateLiveTotal();
+});
+$('#qty-input').addEventListener('input', updateLiveTotal);
+
+$('#purchase-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const feedback = $('#purchase-feedback');
+  feedback.classList.add('hidden');
+
+  // Purchase panel is only reachable once logged in, but guard anyway.
+  if (!state.subscription) { exitApp(); return; }
+
+  const quantity = Math.max(1, parseInt($('#qty-input').value, 10) || 1);
+  const phone = $('#mm-phone').value.trim() || state.subscription.phone_number;
+
+  const payload = {
+    subscription_id: state.subscription.subscription_id,
+    service_tier: state.selectedTier,
+    quantity,
+    payment_provider: state.selectedProvider,
+    phone_number: phone,
+  };
+
+  const submitBtn = $('#purchase-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending to your phone…';
+
+  try {
+    const result = await api('/payments/initialize', { method: 'POST', body: JSON.stringify(payload) });
+
+    if (result.status === 'completed') {
+      feedback.textContent = `Payment completed — ${result.tokens} token${result.tokens === 1 ? '' : 's'} credited to your balance.`;
+      feedback.style.color = 'var(--primary)';
+      showToast('Payment completed.');
+      await refreshProfile(); // balance changed — pull the up-to-date figure immediately
+    } else if (result.status === 'failed') {
+      feedback.textContent = 'The mobile money provider declined this payment. No tokens were charged.';
+      feedback.style.color = 'var(--danger)';
+      showToast('Payment declined.', true);
+    } else {
+      feedback.textContent = `Request sent — approve the ${state.selectedProvider === 'orange_money' ? 'Orange Money' : 'Africell Money'} prompt on your phone to complete the ${formatSLE(result.totalPrice)} payment.`;
+      feedback.style.color = 'var(--primary)';
+      showToast('Payment request sent to the Gateway.');
+    }
+    feedback.classList.remove('hidden');
+    loadHistory();
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    feedback.classList.remove('hidden');
+    showToast(err.message, true);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Process Mobile Money Payment';
+  }
+});
+
+// ============================================================================
+// PANEL — History & Balance Dashboard
+// ============================================================================
+function renderBalance() {
+  const balance = state.subscription?.token_balance ?? 0;
+  $('#header-balance').textContent = balance;
+  $('#dash-balance').textContent = balance;
+  $('#dash-name').textContent = state.subscription
+    ? `${state.subscription.full_name} · ${state.subscription.neighborhood_tag}`
+    : '—';
+}
+
+/** Re-fetch the logged-in customer's profile (used after a payment settles
+ *  immediately, so the token balance shown updates without waiting for the
+ *  person to navigate away and back). */
+async function refreshProfile() {
+  if (!state.subscription) return;
+  try {
+    const fresh = await api(`/customers/${state.subscription.subscription_id}`);
+    state.subscription = fresh;
+    renderBalance();
+  } catch (err) {
+    // Non-fatal — the balance will just catch up next time something reloads it.
+    console.error('Could not refresh profile balance', err);
+  }
+}
+
+async function loadHistory() {
+  if (!state.subscription) return;
+  try {
+    const rows = await api(`/customers/${state.subscription.subscription_id}/history`);
+    const empty = $('#history-empty');
+    const table = $('#history-table');
+    if (!rows.length) {
+      empty.classList.remove('hidden');
+      table.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    table.classList.remove('hidden');
+    table.innerHTML = rows.map(row => `
+      <div class="rounded-xl px-4 py-3 flex items-center justify-between" style="background:var(--surface); border:1.5px solid var(--border);">
+        <div>
+          <p class="text-sm font-medium capitalize">${row.service_tier} · ×${row.quantity}</p>
+          <p class="text-xs font-mono mt-0.5" style="color:var(--ink-soft)">${new Date(row.created_at).toLocaleDateString()} · ${row.payment_provider.replace('_', ' ')}</p>
+        </div>
+        <div class="text-right">
+          <p class="font-mono text-sm font-semibold">${formatSLE(row.total_price_sle)}</p>
+          <span class="status-pill status-${row.status}">${row.status}</span>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    showToast('Could not load transaction history.', true);
+  }
+}
+
+// ============================================================================
+// NOTIFICATIONS — updates from the Driver Subsystem (e.g. "bin collected"),
+// relayed through the API Gateway. This subsystem never talks to the
+// Driver Subsystem directly; it just displays what its own database has.
+// ============================================================================
+async function loadNotifications() {
+  if (!state.subscription) return;
+  try {
+    const rows = await api(`/customers/${state.subscription.subscription_id}/notifications`);
+    const empty = $('#notif-empty');
+    const list = $('#notif-list');
+    const unreadCount = rows.filter(n => !n.is_read).length;
+
+    const badge = $('#notif-unread-badge');
+    const navDot = $('#nav-unread-dot');
+    if (unreadCount > 0) {
+      badge.textContent = `${unreadCount} new`;
+      badge.classList.remove('hidden');
+      navDot.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+      navDot.classList.add('hidden');
+    }
+
+    if (!rows.length) {
+      empty.classList.remove('hidden');
+      list.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    list.classList.remove('hidden');
+    list.innerHTML = rows.map(n => `
+      <div class="notif-item rounded-xl px-4 py-3 cursor-pointer" data-id="${n.notification_id}"
+           style="background:${n.is_read ? 'var(--surface)' : '#EEF6F9'}; border:1.5px solid ${n.is_read ? 'var(--border)' : 'var(--teal)'};">
+        <div class="flex items-start justify-between gap-2">
+          <p class="text-sm font-semibold">${n.title}</p>
+          ${n.is_read ? '' : '<span class="w-2 h-2 rounded-full shrink-0 mt-1.5" style="background:var(--teal)"></span>'}
+        </div>
+        <p class="text-sm mt-0.5" style="color:var(--ink-soft)">${n.message}</p>
+        <p class="text-xs font-mono mt-1.5" style="color:var(--ink-soft)">${new Date(n.created_at).toLocaleString()}</p>
+      </div>
+    `).join('');
+
+    $all('.notif-item', list).forEach(el => el.addEventListener('click', () => markNotificationRead(el.dataset.id)));
+  } catch (err) {
+    showToast('Could not load notifications.', true);
+  }
+}
+
+async function markNotificationRead(notificationId) {
+  if (!state.subscription) return;
+  try {
+    await api(`/customers/${state.subscription.subscription_id}/notifications/${notificationId}/read`, { method: 'PATCH' });
+    loadNotifications();
+  } catch (err) {
+    // Non-fatal — just leave it marked unread if this fails.
+  }
+}
+
+// ---------------------------------------------------------------- boot up --
+async function bootstrap() {
+  loadNeighborhoods();
+  try {
+    state.tiers = await api('/purchases/tiers');
+  } catch (e) {
+    // Fallback so the UI still works if the API is briefly unreachable.
+    state.tiers = { small: { label: 'Small', tokensPerUnit: 1, priceSLE: 50 }, medium: { label: 'Medium', tokensPerUnit: 5, priceSLE: 225 }, large: { label: 'Large', tokensPerUnit: 10, priceSLE: 400 } };
+  }
+  renderTierOptions();
+  renderProviderOptions();
+  updateLiveTotal();
+  // Auth gate is shown by default in HTML (auth-shell visible, app-shell
+  // hidden) — nothing else to do here until the person logs in or registers.
+}
+bootstrap();
+</script>
+</body>
+</html>

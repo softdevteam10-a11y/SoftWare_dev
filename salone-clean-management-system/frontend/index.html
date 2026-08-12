@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Salone Clean · Management Console</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F7F0;
+    --surface:#FFFFFF;
+    --ink:#152219;
+    --ink-soft:#5A6A5E;
+    --primary:#0F5132;
+    --primary-dark:#0B3B24;
+    --gold:#F2B705;
+    --teal:#1C6E8C;
+    --danger:#C0392B;
+    --warning:#B98304;
+    --border:#DFE7DA;
+    --sidebar-w:248px;
+  }
+  html,body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; }
+  .font-display{ font-family:'Space Grotesk',sans-serif; }
+  .font-mono{ font-family:'IBM Plex Mono',monospace; }
+
+  .sidebar{ width:var(--sidebar-w); background:linear-gradient(180deg, var(--primary), var(--primary-dark)); }
+  .main{ margin-left:var(--sidebar-w); min-height:100vh; }
+  @media (max-width: 900px){ .sidebar{ width:72px; } .main{ margin-left:72px; } .sidebar .nav-label, .sidebar .brand-text{ display:none; } }
+
+  .nav-btn{ color:rgba(255,255,255,0.68); transition: background .15s ease, color .15s ease; }
+  .nav-btn.active{ background:rgba(255,255,255,0.12); color:#fff; border-left:3px solid var(--gold); }
+  .nav-btn:hover{ background:rgba(255,255,255,0.08); color:#fff; }
+
+  .view{ display:none; }
+  .view.active{ display:block; animation: fadeUp .2s ease; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .kpi-card{ background:var(--surface); border:1.5px solid var(--border); }
+  .field-input{ background:var(--surface); border:1.5px solid var(--border); color:var(--ink); }
+  .field-input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(15,81,50,0.12); }
+
+  .bar-track{ background:#E7EFE4; }
+  .bar-fill{ background:linear-gradient(90deg, var(--leaf,#4C9A63), var(--primary)); }
+
+  .sev-pill{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:999px; letter-spacing:.02em; }
+  .sev-INFO{ background:#E4F3E7; color:#1F7A3D; }
+  .sev-WARNING{ background:#FFF3D6; color:#9A6B00; }
+  .sev-CRITICAL{ background:#FBE7E4; color:#B23A26; }
+
+  .subsys-pill{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 8px; border-radius:6px; }
+  .subsys-CUSTOMER{ background:#EEF6F9; color:var(--teal); }
+  .subsys-DRIVER{ background:#F4EEFB; color:#6B3FA0; }
+  .subsys-ALL{ background:#F1F1EC; color:var(--ink-soft); }
+
+  .row-clickable:hover{ background:#F7FAF6; cursor:pointer; }
+
+  .modal-backdrop{ background:rgba(11,59,36,0.45); backdrop-filter: blur(2px); }
+  .toast{ transform: translateY(140%); transition: transform .25s ease; }
+  .toast.show{ transform: translateY(0); }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#CBD8C6; border-radius:8px; }
+</style>
+</head>
+<body>
+
+<!-- ============================= SIDEBAR ============================= -->
+<aside class="sidebar fixed left-0 top-0 h-full flex flex-col z-20">
+  <div class="flex items-center gap-2.5 px-4 py-5">
+    <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C7 6 4 10.5 4 14.5C4 18.6 7.6 22 12 22C16.4 22 20 18.6 20 14.5C20 10.5 17 6 12 2Z" fill="#F2B705"/>
+        <path d="M8.5 14.5C8.5 12 10 9.8 12 8" stroke="#0F5132" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand-text leading-tight">
+      <p class="font-display text-white text-sm font-semibold">Salone Clean</p>
+      <p class="text-[10px]" style="color:rgba(255,255,255,0.6)">Management Console</p>
+    </div>
+  </div>
+
+  <nav class="flex-1 mt-2">
+    <button data-view="analytics" class="nav-btn active w-full flex items-center gap-3 px-4 py-3 text-left">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+      <span class="nav-label text-[13px] font-medium">Dashboard</span>
+    </button>
+    <button data-view="compliance" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-left">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="8.5"/></svg>
+      <span class="nav-label text-[13px] font-medium">Compliance Control</span>
+    </button>
+    <button data-view="audit" class="nav-btn w-full flex items-center gap-3 px-4 py-3 text-left">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3.5h9l3 3v14H6z"/><path d="M9 11h6M9 14.5h6M9 17.5h4"/></svg>
+      <span class="nav-label text-[13px] font-medium">Audit Reports</span>
+    </button>
+  </nav>
+
+  <div class="px-4 py-4 flex items-center gap-2.5" style="border-top:1px solid rgba(255,255,255,0.15);">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold" style="background:var(--gold); color:var(--primary-dark);">AD</div>
+    <div class="nav-label leading-tight">
+      <p class="text-white text-xs font-medium">Admin</p>
+      <p class="text-[10px]" style="color:rgba(255,255,255,0.55)">Freetown HQ</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ============================= MAIN ============================= -->
+<div class="main">
+  <header class="bg-white flex items-center justify-between px-6 py-4" style="border-bottom:1.5px solid var(--border);">
+    <div>
+      <h1 id="view-title" class="font-display text-lg font-semibold">Global Operational Analytics</h1>
+      <p id="view-subtitle" class="text-xs" style="color:var(--ink-soft)">City-wide oversight for Freetown</p>
+    </div>
+    <button id="refresh-btn" class="px-3.5 py-2 rounded-lg text-xs font-semibold font-display" style="background:var(--bg); border:1.5px solid var(--border); color:var(--ink-soft);">
+      ↻ Refresh
+    </button>
+  </header>
+
+  <main class="p-6 max-w-6xl">
+
+    <!-- ============================= PANEL 1: ANALYTICS ============================= -->
+    <section id="view-analytics" class="view active">
+      <div id="analytics-unavailable" class="hidden rounded-xl px-4 py-3 mb-4 text-sm" style="background:#FBE7E4; color:#B23A26;">
+        Live data unavailable — the Gateway or Customer Subsystem isn't reachable right now. <span id="analytics-unavailable-detail" class="font-mono text-xs"></span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <div class="kpi-card rounded-2xl px-5 py-5">
+          <p class="text-[11px] uppercase tracking-wide font-medium" style="color:var(--ink-soft)">Total System Tokens Redeemed</p>
+          <p id="kpi-tokens" class="font-mono text-3xl font-bold mt-2">—</p>
+          <p class="text-[11px] mt-1" style="color:#1F7A3D">● live · from Customer Subsystem</p>
+        </div>
+        <div class="kpi-card rounded-2xl px-5 py-5">
+          <p class="text-[11px] uppercase tracking-wide font-medium" style="color:var(--ink-soft)">Total Registered Customers</p>
+          <p id="kpi-customers" class="font-mono text-3xl font-bold mt-2">—</p>
+          <p class="text-[11px] mt-1" style="color:#1F7A3D">● live · from Customer Subsystem</p>
+        </div>
+        <div class="kpi-card rounded-2xl px-5 py-5">
+          <p class="text-[11px] uppercase tracking-wide font-medium" style="color:var(--ink-soft)">Pending / Failed Transactions</p>
+          <p id="kpi-exceptions" class="font-mono text-3xl font-bold mt-2">—</p>
+          <p class="text-[11px] mt-1" style="color:var(--danger)">● needs follow-up</p>
+        </div>
+        <div class="kpi-card rounded-2xl px-5 py-5">
+          <p class="text-[11px] uppercase tracking-wide font-medium" style="color:var(--ink-soft)">Compliance Log Entries</p>
+          <p id="kpi-compliance" class="font-mono text-3xl font-bold mt-2">—</p>
+          <p class="text-[11px] mt-1" style="color:var(--teal)">● live · local to this subsystem</p>
+        </div>
+      </div>
+
+      <div class="kpi-card rounded-2xl px-6 py-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h3 class="font-display text-sm font-semibold">Token Purchases by Neighborhood</h3>
+            <p class="text-xs" style="color:var(--ink-soft)">Completed token purchases, grouped by each customer's registered neighborhood</p>
+          </div>
+          <span class="font-mono text-[11px] px-2 py-1 rounded" style="background:var(--bg); color:var(--ink-soft)">tokens</span>
+        </div>
+        <div id="volume-chart" class="space-y-3"><!-- bars injected by JS --></div>
+        <p id="volume-chart-empty" class="text-sm text-center py-8 hidden" style="color:var(--ink-soft)">No customers registered yet — this chart fills in as people sign up and buy tokens.</p>
+      </div>
+    </section>
+
+    <!-- ============================= PANEL 2: COMPLIANCE CONTROL ============================= -->
+    <section id="view-compliance" class="view">
+
+      <!-- Riders -->
+      <div class="kpi-card rounded-2xl px-6 py-5 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display text-sm font-semibold">Riders</h3>
+          <span class="text-[11px] font-mono px-2 py-1 rounded" style="background:var(--bg); color:var(--ink-soft)">via Driver Subsystem</span>
+        </div>
+        <form id="add-rider-form" class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <input type="text" id="rider-name" placeholder="Full name" required class="field-input rounded-lg px-3 py-2.5 text-sm" />
+          <input type="tel" id="rider-phone" placeholder="+232 76 000 000" required class="field-input rounded-lg px-3 py-2.5 text-sm font-mono" />
+          <div class="flex gap-2">
+            <input type="text" id="rider-vehicle" placeholder="Vehicle (optional)" class="field-input flex-1 rounded-lg px-3 py-2.5 text-sm" />
+            <button type="submit" id="add-rider-submit" class="px-4 rounded-lg font-display text-sm font-semibold shrink-0" style="background:var(--primary); color:#fff;">+ Add</button>
+          </div>
+        </form>
+        <p id="rider-feedback" class="text-xs mb-3 hidden"></p>
+        <div id="riders-empty" class="text-sm text-center py-6" style="color:var(--ink-soft)">No riders added yet.</div>
+        <div id="riders-list" class="space-y-2 hidden"></div>
+      </div>
+
+      <!-- Route builder -->
+      <div class="kpi-card rounded-2xl px-6 py-5 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-display text-sm font-semibold">Build &amp; Deploy a Route</h3>
+          <span class="text-[11px] font-mono px-2 py-1 rounded" style="background:var(--bg); color:var(--ink-soft)">real customers + riders</span>
+        </div>
+        <form id="route-builder-form" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Assign to rider</label>
+              <select id="builder-rider" required class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm">
+                <option value="" disabled selected>Select a rider</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Scheduled date</label>
+              <input type="date" id="builder-date" required class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Route name</label>
+            <input type="text" id="builder-route-name" placeholder="e.g. Aberdeen Morning Run" required class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm" />
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Pickup stops (select customers)</label>
+              <span id="builder-selected-count" class="text-[11px] font-mono" style="color:var(--ink-soft)">0 selected</span>
+            </div>
+            <div id="builder-customers" class="space-y-1.5 max-h-64 overflow-y-auto rounded-lg p-2" style="border:1.5px solid var(--border);">
+              <p id="builder-customers-empty" class="text-sm text-center py-4" style="color:var(--ink-soft)">Loading customers…</p>
+            </div>
+          </div>
+          <button type="submit" id="builder-submit" class="rounded-lg px-5 py-2.5 font-display text-sm font-semibold" style="background:var(--primary); color:#fff;">
+            Deploy Route to Driver Subsystem
+          </button>
+          <span id="builder-feedback" class="text-xs ml-3"></span>
+        </form>
+      </div>
+
+      <!-- Advanced: raw config deploy (kept for non-route config pushes) -->
+      <details class="kpi-card rounded-2xl px-6 py-5 mb-6">
+        <summary class="font-display text-sm font-semibold cursor-pointer">Advanced: raw config deploy</summary>
+        <form id="deploy-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Admin User ID</label>
+            <input type="text" id="deploy-admin-id" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm font-mono" />
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Target Subsystem</label>
+            <select id="deploy-target" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm">
+              <option value="DRIVER">Driver System</option>
+              <option value="CUSTOMER">Customer System</option>
+              <option value="ALL">All Subsystems</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Config Payload (JSON)</label>
+            <textarea id="deploy-config" rows="3" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-xs font-mono resize-none">{
+  "route_batch": "weekly-central",
+  "effective_date": "2026-08-01",
+  "neighborhoods": ["Aberdeen", "Lumley", "Congo Cross"]
+}</textarea>
+          </div>
+          <div class="sm:col-span-2">
+            <button type="submit" id="deploy-submit" class="btn-primary rounded-lg px-5 py-2.5 font-display text-sm font-semibold" style="background:var(--primary); color:#fff;">
+              Deploy Global Route Update
+            </button>
+            <span id="deploy-feedback" class="text-xs ml-3"></span>
+          </div>
+        </form>
+      </details>
+
+      <div class="kpi-card rounded-2xl px-6 py-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 class="font-display text-sm font-semibold">System Compliance Logs</h3>
+          <div class="flex gap-2">
+            <select id="filter-subsystem" class="field-input rounded-lg px-3 py-1.5 text-xs">
+              <option value="">All subsystems</option>
+              <option value="CUSTOMER">Customer</option>
+              <option value="DRIVER">Driver</option>
+              <option value="ALL">All (global)</option>
+            </select>
+            <select id="filter-severity" class="field-input rounded-lg px-3 py-1.5 text-xs">
+              <option value="">All severities</option>
+              <option value="INFO">Info</option>
+              <option value="WARNING">Warning</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-[11px] uppercase tracking-wide" style="color:var(--ink-soft)">
+                <th class="py-2 pr-4">Log ID</th>
+                <th class="py-2 pr-4">Admin Action</th>
+                <th class="py-2 pr-4">Target Subsystem</th>
+                <th class="py-2 pr-4">Severity</th>
+                <th class="py-2 pr-4">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody"></tbody>
+          </table>
+          <p id="logs-empty" class="text-sm text-center py-8 hidden" style="color:var(--ink-soft)">No compliance logs match these filters.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= PANEL 3: AUDIT REPORT GENERATOR ============================= -->
+    <section id="view-audit" class="view">
+      <div class="kpi-card rounded-2xl px-6 py-5 mb-6">
+        <h3 class="font-display text-sm font-semibold mb-4">Generate Compliance Audit Report</h3>
+        <form id="audit-form" class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Subsystem Target</label>
+            <select id="audit-subsystem" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm">
+              <option value="ALL">All</option>
+              <option value="CUSTOMER">Customer System</option>
+              <option value="DRIVER">Driver System</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Start Date</label>
+            <input type="date" id="audit-start" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">End Date</label>
+            <input type="date" id="audit-end" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Export Format</label>
+            <select id="audit-format" class="field-input w-full mt-1 rounded-lg px-3 py-2.5 text-sm">
+              <option value="JSON">JSON</option>
+              <option value="MOCK_PDF">Mock PDF</option>
+            </select>
+          </div>
+          <div class="sm:col-span-4">
+            <button type="submit" id="audit-submit" class="rounded-lg px-5 py-2.5 font-display text-sm font-semibold" style="background:var(--primary); color:#fff;">
+              Generate Compliance Audit Report
+            </button>
+            <span id="audit-feedback" class="text-xs ml-3"></span>
+          </div>
+        </form>
+      </div>
+
+      <div id="audit-results" class="kpi-card rounded-2xl px-6 py-5 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="font-display text-sm font-semibold">Report Results</h3>
+            <p id="audit-meta" class="text-xs" style="color:var(--ink-soft)"></p>
+          </div>
+          <button id="audit-download-btn" class="rounded-lg px-4 py-2 text-xs font-semibold font-display" style="background:var(--gold); color:var(--primary-dark);">
+            ⬇ Download Export
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-[11px] uppercase tracking-wide" style="color:var(--ink-soft)">
+                <th class="py-2 pr-4">Log ID</th>
+                <th class="py-2 pr-4">Admin Action</th>
+                <th class="py-2 pr-4">Target Subsystem</th>
+                <th class="py-2 pr-4">Severity</th>
+                <th class="py-2 pr-4">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============================= LOG DETAIL MODAL ============================= -->
+<div id="log-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 px-4">
+  <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden">
+    <div class="px-5 py-4 flex items-center justify-between" style="border-bottom:1.5px solid var(--border);">
+      <h3 class="font-display text-sm font-semibold">Payload Snapshot</h3>
+      <button id="modal-close" class="text-lg leading-none" style="color:var(--ink-soft)">✕</button>
+    </div>
+    <div class="px-5 py-4">
+      <p id="modal-meta" class="text-xs mb-3" style="color:var(--ink-soft)"></p>
+      <pre id="modal-json" class="font-mono text-xs rounded-lg p-4 overflow-x-auto" style="background:#0B3B24; color:#DFF3E4; max-height:340px;"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl text-sm text-white text-center z-50 max-w-md" style="background:var(--ink);"></div>
+
+<script>
+// ============================================================================
+// app.js (inline) — talks to the Management Subsystem's REST API only.
+// This dashboard never calls the Customer or Driver subsystems directly;
+// the backend is the one that reaches the API Gateway for any dispatch.
+// ============================================================================
+
+const API_BASE_URL = 'http://localhost:4002/api/v1';
+
+// In-memory-only session state (no localStorage — see Customer Subsystem
+// frontend for the same note). A production build would use a real admin
+// login/session instead of a free-text Admin User ID field.
+const state = {
+  lastAuditResult: null,
+};
+
+function $(sel, root = document) { return root.querySelector(sel); }
+function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+
+function showToast(message, isError = false) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.style.background = isError ? 'var(--danger)' : 'var(--ink)';
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 3600);
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.success === false) {
+    const err = new Error(body?.error?.message || 'Request failed');
+    err.details = body?.error?.details;
+    err.code = body?.error?.code;
+    throw err;
+  }
+  return body.data;
+}
+
+// ------------------------------------------------------------- view switch --
+const VIEW_META = {
+  analytics: { title: 'Global Operational Analytics', subtitle: 'City-wide oversight for Freetown' },
+  compliance: { title: 'Subsystem Configuration & Compliance Control', subtitle: 'Audit trail and route-update dispatch' },
+  audit: { title: 'Audit Report Generator', subtitle: 'Filtered compliance exports for the City Council' },
+};
+
+function switchView(view) {
+  $all('.view').forEach(v => v.classList.remove('active'));
+  $(`#view-${view}`).classList.add('active');
+  $all('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $('#view-title').textContent = VIEW_META[view].title;
+  $('#view-subtitle').textContent = VIEW_META[view].subtitle;
+  if (view === 'analytics') loadAnalytics();
+  if (view === 'compliance') { loadComplianceLogs(); loadRiders(); loadBuilderCustomers(); }
+}
+$all('.nav-btn').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+$('#refresh-btn').addEventListener('click', () => {
+  const active = $('.nav-btn.active').dataset.view;
+  switchView(active);
+  showToast('Refreshed.');
+});
+
+// ============================================================================
+// PANEL 1 — Global Operational Analytics
+// ============================================================================
+async function loadAnalytics() {
+  try {
+    const data = await api('/analytics/overview');
+    const unavailableBanner = $('#analytics-unavailable');
+
+    if (!data.available) {
+      unavailableBanner.classList.remove('hidden');
+      $('#analytics-unavailable-detail').textContent = data.gateway_error ? `(${data.gateway_error})` : '';
+    } else {
+      unavailableBanner.classList.add('hidden');
+    }
+
+    $('#kpi-tokens').textContent = data.kpis.total_tokens_redeemed.value ?? '—';
+    $('#kpi-customers').textContent = data.kpis.total_registered_customers.value ?? '—';
+    $('#kpi-exceptions').textContent = data.kpis.pending_or_failed_transactions.value ?? '—';
+    $('#kpi-compliance').textContent = data.kpis.compliance_log_entries.value;
+
+    const chart = $('#volume-chart');
+    const empty = $('#volume-chart-empty');
+    if (!data.tokens_by_neighborhood.length) {
+      chart.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    const max = Math.max(1, ...data.tokens_by_neighborhood.map(v => v.tokens));
+    chart.innerHTML = data.tokens_by_neighborhood.map(v => `
+      <div>
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-medium">${v.neighborhood}</span>
+          <span class="font-mono" style="color:var(--ink-soft)">${v.tokens}</span>
+        </div>
+        <div class="bar-track h-2.5 rounded-full overflow-hidden">
+          <div class="bar-fill h-full rounded-full" style="width:${(v.tokens / max * 100).toFixed(0)}%; background:linear-gradient(90deg, #4C9A63, var(--primary));"></div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    showToast(`Could not load analytics — is the backend running on ${API_BASE_URL}? (${err.message})`, true);
+  }
+}
+
+// ============================================================================
+// PANEL 2 — Subsystem Configuration & Compliance Control
+// ============================================================================
+function severityPill(level) { return `<span class="sev-pill sev-${level}">${level}</span>`; }
+function subsystemPill(target) { return `<span class="subsys-pill subsys-${target}">${target}</span>`; }
+
+async function loadComplianceLogs() {
+  const subsystem = $('#filter-subsystem').value;
+  const severity = $('#filter-severity').value;
+  const params = new URLSearchParams();
+  if (subsystem) params.set('subsystem', subsystem);
+  if (severity) params.set('severity', severity);
+
+  try {
+    const rows = await api(`/compliance/logs?${params.toString()}`);
+    const tbody = $('#logs-tbody');
+    const empty = $('#logs-empty');
+    if (!rows.length) {
+      tbody.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    tbody.innerHTML = rows.map(row => `
+      <tr class="row-clickable" data-log-id="${row.log_id}" style="border-top:1px solid var(--border);">
+        <td class="py-2.5 pr-4 font-mono text-xs">${row.log_id.slice(0, 8)}…</td>
+        <td class="py-2.5 pr-4">${row.action_performed}</td>
+        <td class="py-2.5 pr-4">${subsystemPill(row.target_subsystem)}</td>
+        <td class="py-2.5 pr-4">${severityPill(row.severity_level)}</td>
+        <td class="py-2.5 pr-4 font-mono text-xs" style="color:var(--ink-soft)">${new Date(row.timestamp).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    $all('#logs-tbody tr').forEach(tr => tr.addEventListener('click', () => openLogModal(tr.dataset.logId)));
+  } catch (err) {
+    showToast(`Could not load compliance logs (${err.message})`, true);
+  }
+}
+$('#filter-subsystem').addEventListener('change', loadComplianceLogs);
+$('#filter-severity').addEventListener('change', loadComplianceLogs);
+
+async function openLogModal(logId) {
+  try {
+    const log = await api(`/compliance/logs/${logId}`);
+    $('#modal-meta').textContent = `${log.action_performed} · ${log.target_subsystem} · ${new Date(log.timestamp).toLocaleString()}`;
+    let pretty = log.payload_snapshot;
+    try { pretty = JSON.stringify(JSON.parse(log.payload_snapshot), null, 2); } catch (_) { /* leave as raw text */ }
+    $('#modal-json').textContent = pretty || '(no payload recorded)';
+    $('#log-modal').classList.remove('hidden');
+    $('#log-modal').classList.add('flex');
+  } catch (err) {
+    showToast(err.message, true);
+  }
+}
+$('#modal-close').addEventListener('click', () => { $('#log-modal').classList.add('hidden'); $('#log-modal').classList.remove('flex'); });
+$('#log-modal').addEventListener('click', (e) => { if (e.target.id === 'log-modal') $('#modal-close').click(); });
+
+// ----------------------------------------------------------------------------
+// Riders — "Add Rider" and rider list, both via the Gateway -> Driver Subsystem
+// ----------------------------------------------------------------------------
+let ridersCache = [];
+
+async function loadRiders() {
+  try {
+    ridersCache = await api('/fleet/riders');
+    const empty = $('#riders-empty');
+    const list = $('#riders-list');
+    if (!ridersCache.length) {
+      empty.classList.remove('hidden');
+      list.classList.add('hidden');
+    } else {
+      empty.classList.add('hidden');
+      list.classList.remove('hidden');
+      list.innerHTML = ridersCache.map(r => `
+        <div class="rounded-lg px-3 py-2 flex items-center justify-between text-sm" style="background:var(--bg);">
+          <div>
+            <span class="font-medium">${r.full_name}</span>
+            <span class="font-mono text-xs ml-2" style="color:var(--ink-soft)">${r.phone_number}</span>
+          </div>
+          <span class="text-xs" style="color:var(--ink-soft)">${r.vehicle_label || 'No vehicle'}</span>
+        </div>
+      `).join('');
+    }
+    populateRiderSelect();
+  } catch (err) {
+    showToast(`Could not load riders (${err.message})`, true);
+  }
+}
+
+function populateRiderSelect() {
+  const select = $('#builder-rider');
+  const current = select.value;
+  select.innerHTML = '<option value="" disabled>Select a rider</option>' +
+    ridersCache.map(r => `<option value="${r.phone_number}" data-name="${r.full_name}">${r.full_name} — ${r.phone_number}</option>`).join('');
+  if (current) select.value = current;
+}
+
+$('#add-rider-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const feedback = $('#rider-feedback');
+  feedback.classList.add('hidden');
+
+  const payload = {
+    full_name: $('#rider-name').value.trim(),
+    phone_number: $('#rider-phone').value.trim(),
+    vehicle_label: $('#rider-vehicle').value.trim() || null,
+  };
+
+  const btn = $('#add-rider-submit');
+  btn.disabled = true;
+
+  try {
+    await api('/fleet/riders', { method: 'POST', body: JSON.stringify(payload) });
+    showToast(`Rider ${payload.full_name} added.`);
+    $('#add-rider-form').reset();
+    loadRiders();
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    feedback.classList.remove('hidden');
+    showToast(err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// ----------------------------------------------------------------------------
+// Route builder — real customer picker + rider picker, deploys through the
+// existing /compliance/deploy -> Gateway -> Driver Subsystem /routes/ingest pipeline
+// ----------------------------------------------------------------------------
+let customersCache = [];
+const selectedCustomerIds = new Set();
+
+async function loadBuilderCustomers() {
+  try {
+    customersCache = await api('/fleet/customers');
+    const container = $('#builder-customers');
+    if (!customersCache.length) {
+      container.innerHTML = '<p class="text-sm text-center py-4" style="color:var(--ink-soft)">No registered customers yet.</p>';
+      return;
+    }
+    container.innerHTML = customersCache.map(c => `
+      <label class="flex items-center gap-2.5 px-2 py-2 rounded-lg cursor-pointer" style="hover:background:var(--bg);">
+        <input type="checkbox" class="builder-customer-checkbox" value="${c.subscription_id}" />
+        <span class="text-sm flex-1">${c.full_name} <span class="text-xs" style="color:var(--ink-soft)">· ${c.neighborhood_tag}</span></span>
+      </label>
+    `).join('');
+    $all('.builder-customer-checkbox', container).forEach(cb => cb.addEventListener('change', () => {
+      if (cb.checked) selectedCustomerIds.add(cb.value); else selectedCustomerIds.delete(cb.value);
+      $('#builder-selected-count').textContent = `${selectedCustomerIds.size} selected`;
+    }));
+  } catch (err) {
+    $('#builder-customers').innerHTML = `<p class="text-sm text-center py-4" style="color:var(--danger)">Could not load customers (${err.message})</p>`;
+  }
+}
+
+$('#route-builder-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const feedback = $('#builder-feedback');
+  feedback.textContent = '';
+
+  if (selectedCustomerIds.size === 0) {
+    feedback.textContent = 'Select at least one customer as a pickup stop.';
+    feedback.style.color = 'var(--danger)';
+    return;
+  }
+
+  const riderSelect = $('#builder-rider');
+  const riderOption = riderSelect.options[riderSelect.selectedIndex];
+  const selectedCustomers = customersCache.filter(c => selectedCustomerIds.has(c.subscription_id));
+
+  const configPayload = {
+    driver_phone_number: riderSelect.value,
+    driver_name: riderOption?.dataset.name || undefined,
+    route_name: $('#builder-route-name').value.trim(),
+    scheduled_date: $('#builder-date').value,
+    neighborhood_tags: [...new Set(selectedCustomers.map(c => c.neighborhood_tag))],
+    tasks: selectedCustomers.map((c, i) => ({
+      customer_reference: c.subscription_id,
+      sequence_order: i + 1,
+      address_snapshot: c.street_address,
+      neighborhood_tag: c.neighborhood_tag,
+    })),
+  };
+
+  const payload = {
+    admin_user_id: $('#deploy-admin-id').value.trim() || crypto.randomUUID(),
+    target_subsystem: 'DRIVER',
+    config_payload: configPayload,
+  };
+
+  const btn = $('#builder-submit');
+  btn.disabled = true;
+  btn.textContent = 'Deploying…';
+
+  try {
+    const result = await api('/compliance/deploy', { method: 'POST', body: JSON.stringify(payload) });
+    feedback.textContent = `Deployed — ${configPayload.tasks.length} stop(s) assigned to ${configPayload.driver_name || configPayload.driver_phone_number}.`;
+    feedback.style.color = 'var(--primary)';
+    showToast('Route deployed to the Driver Subsystem.');
+    loadComplianceLogs();
+    $('#route-builder-form').reset();
+    selectedCustomerIds.clear();
+    $('#builder-selected-count').textContent = '0 selected';
+    $all('.builder-customer-checkbox').forEach(cb => cb.checked = false);
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    showToast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Deploy Route to Driver Subsystem';
+  }
+});
+
+// Give the deploy form's admin id a plausible default so the demo is one click.
+$('#deploy-admin-id').value = crypto.randomUUID();
+
+$('#deploy-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const feedback = $('#deploy-feedback');
+  feedback.textContent = '';
+
+  let configPayload;
+  try {
+    configPayload = JSON.parse($('#deploy-config').value);
+  } catch (e) {
+    feedback.textContent = 'Config payload must be valid JSON.';
+    feedback.style.color = 'var(--danger)';
+    return;
+  }
+
+  const payload = {
+    admin_user_id: $('#deploy-admin-id').value.trim(),
+    target_subsystem: $('#deploy-target').value,
+    config_payload: configPayload,
+  };
+
+  const btn = $('#deploy-submit');
+  btn.disabled = true;
+  btn.textContent = 'Dispatching…';
+
+  try {
+    const result = await api('/compliance/deploy', { method: 'POST', body: JSON.stringify(payload) });
+    feedback.textContent = `Dispatched via API Gateway (log ${result.log_id.slice(0, 8)}…).`;
+    feedback.style.color = 'var(--primary)';
+    showToast('Global route update dispatched.');
+    loadComplianceLogs();
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    showToast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Deploy Global Route Update';
+  }
+});
+
+// ============================================================================
+// PANEL 3 — Audit Report Generator
+// ============================================================================
+// Default the date range to the last 30 days.
+(function setDefaultDates() {
+  const end = new Date();
+  const start = new Date(); start.setDate(end.getDate() - 30);
+  $('#audit-end').value = end.toISOString().slice(0, 10);
+  $('#audit-start').value = start.toISOString().slice(0, 10);
+})();
+
+$('#audit-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const feedback = $('#audit-feedback');
+  feedback.textContent = '';
+
+  const payload = {
+    admin_user_id: $('#deploy-admin-id').value.trim() || crypto.randomUUID(),
+    target_subsystem: $('#audit-subsystem').value,
+    start_date: $('#audit-start').value,
+    end_date: $('#audit-end').value,
+    export_format: $('#audit-format').value,
+  };
+
+  const btn = $('#audit-submit');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+
+  try {
+    const result = await api('/audit/reports', { method: 'POST', body: JSON.stringify(payload) });
+    state.lastAuditResult = result;
+
+    $('#audit-meta').textContent = `${result.meta.row_count} log(s) · ${result.meta.target_subsystem} · ${result.meta.start_date} → ${result.meta.end_date} · format: ${result.meta.export_format}`;
+    $('#audit-tbody').innerHTML = result.rows.map(row => `
+      <tr style="border-top:1px solid var(--border);">
+        <td class="py-2.5 pr-4 font-mono text-xs">${row.log_id.slice(0, 8)}…</td>
+        <td class="py-2.5 pr-4">${row.action_performed}</td>
+        <td class="py-2.5 pr-4">${subsystemPill(row.target_subsystem)}</td>
+        <td class="py-2.5 pr-4">${severityPill(row.severity_level)}</td>
+        <td class="py-2.5 pr-4 font-mono text-xs" style="color:var(--ink-soft)">${new Date(row.timestamp).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    $('#audit-results').classList.remove('hidden');
+    feedback.textContent = 'Report generated and logged.';
+    feedback.style.color = 'var(--primary)';
+    showToast(`Report ready — ${result.meta.row_count} rows.`);
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    showToast(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Compliance Audit Report';
+  }
+});
+
+$('#audit-download-btn').addEventListener('click', () => {
+  if (!state.lastAuditResult) return;
+  const { meta, rows } = state.lastAuditResult;
+
+  if (meta.export_format === 'JSON') {
+    const blob = new Blob([JSON.stringify({ meta, rows }, null, 2)], { type: 'application/json' });
+    triggerDownload(blob, `salone-clean-audit-report-${meta.start_date}_to_${meta.end_date}.json`);
+  } else {
+    // MOCK PDF — simulated export only (no PDF binary library used, per spec).
+    const lines = [
+      'SALONE CLEAN — COMPLIANCE AUDIT REPORT (MOCK PDF EXPORT)',
+      '='.repeat(58),
+      `Subsystem: ${meta.target_subsystem}`,
+      `Range: ${meta.start_date} to ${meta.end_date}`,
+      `Generated: ${meta.generated_at}`,
+      `Rows: ${meta.row_count}`,
+      '-'.repeat(58),
+      ...rows.map(r => `${r.timestamp} | ${r.severity_level.padEnd(8)} | ${r.target_subsystem.padEnd(8)} | ${r.action_performed}`),
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'application/pdf' });
+    triggerDownload(blob, `salone-clean-audit-report-${meta.start_date}_to_${meta.end_date}.pdf`);
+  }
+});
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------- boot up --
+loadAnalytics();
+loadComplianceLogs();
+</script>
+</body>
+</html>

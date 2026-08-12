@@ -1,0 +1,17 @@
+{
+  "name": "salone-clean-mock-gateway",
+  "version": "1.0.0",
+  "description": "Local mock of the Salone Clean API Gateway — for development/testing only. Simulates mobile money settlement and route-update broadcast so the Customer and Management subsystems can be tested end-to-end without a real Gateway or real Driver subsystem.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0"
+  }
+}

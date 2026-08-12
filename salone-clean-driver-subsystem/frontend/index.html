@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Salone Clean · Driver App</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F7F0; --surface:#FFFFFF; --ink:#152219; --ink-soft:#4B5A50;
+    --primary:#0F5132; --primary-dark:#0B3B24; --gold:#F2B705; --gold-dark:#B98304;
+    --teal:#1C6E8C; --danger:#C0392B; --warning:#B98304; --border:#DFE7DA;
+  }
+  *{ -webkit-tap-highlight-color: transparent; }
+  html,body{ background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; }
+  .font-display{ font-family:'Space Grotesk',sans-serif; }
+  .font-mono{ font-family:'IBM Plex Mono',monospace; }
+  .route-texture{ background-image: radial-gradient(circle, rgba(255,255,255,0.25) 1.5px, transparent 1.5px); background-size: 14px 14px; }
+  .app-shell, .auth-shell{ max-width: 480px; margin: 0 auto; min-height: 100dvh; background: var(--bg); box-shadow: 0 0 60px rgba(15,81,50,0.08); }
+  .panel{ display:none; } .panel.active{ display:block; animation: fadeUp .2s ease; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .tab-btn{ color:#9AAA9F; } .tab-btn.active{ color:var(--primary); }
+  .tab-btn.active .tab-dot{ opacity:1; transform:scale(1); } .tab-dot{ opacity:0; transform:scale(0); transition: all .15s ease; }
+  .field-input{ background:var(--surface); border:1.5px solid var(--border); color:var(--ink); }
+  .field-input:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(15,81,50,0.12); }
+  .btn-primary{ background:var(--primary); color:#fff; } .btn-primary:hover{ background:var(--primary-dark); }
+  .btn-primary:disabled{ opacity:.55; cursor:not-allowed; }
+  .task-card{ background:var(--surface); border:1.5px solid var(--border); }
+  .task-card.done{ opacity:0.6; }
+  .status-pill{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.02em; padding:2px 8px; border-radius:999px; }
+  .status-pending{ background:#EEF2EE; color:#5A6A5E; }
+  .status-completed, .status-bin_cleared{ background:#E4F3E7; color:#1F7A3D; }
+  .status-delayed{ background:#FFF3D6; color:#9A6B00; }
+  .status-inaccessible{ background:#FBE7E4; color:#B23A26; }
+  .check-btn{ background:var(--primary); color:#fff; } .check-btn:hover{ background:var(--primary-dark); }
+  .check-btn.done{ background:#E4F3E7; color:#1F7A3D; }
+  .toast{ transform: translateY(120%); transition: transform .25s ease; } .toast.show{ transform: translateY(0); }
+  ::-webkit-scrollbar{ width:0; height:0; }
+</style>
+</head>
+<body>
+
+<!-- ============================= AUTH GATE ============================= -->
+<div id="auth-shell" class="auth-shell flex flex-col">
+  <header class="route-texture" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+    <div class="px-5 pt-12 pb-10 flex flex-col items-center text-center gap-3">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><rect x="1" y="9" width="15" height="9" rx="1.5"/><path d="M16 12h3.5l3.5 3.5V18h-7z"/><circle cx="6" cy="19.5" r="1.8" fill="white"/><circle cx="18" cy="19.5" r="1.8" fill="white"/></svg>
+      </div>
+      <div>
+        <h1 class="font-display text-white text-xl font-semibold leading-tight">Salone Clean</h1>
+        <p class="text-[12px] leading-tight mt-1" style="color:rgba(255,255,255,0.75)">Driver App · Freetown</p>
+      </div>
+    </div>
+  </header>
+  <div class="flex-1 px-5 pt-8 pb-10">
+    <h2 class="font-display text-lg font-semibold mb-1">Rider log in</h2>
+    <p class="text-sm mb-5" style="color:var(--ink-soft)">Enter the phone number your manager registered you with.</p>
+    <form id="login-form" class="space-y-4" novalidate>
+      <div>
+        <label class="text-xs font-medium uppercase tracking-wide" style="color:var(--ink-soft)">Phone number</label>
+        <input type="tel" name="phone_number" required placeholder="+232 76 000 000" class="field-input w-full mt-1 rounded-xl px-4 py-3 text-sm font-mono" />
+        <p id="login-error" class="text-xs mt-1 hidden" style="color:var(--danger)"></p>
+      </div>
+      <button type="submit" id="login-submit" class="btn-primary w-full rounded-xl py-3.5 font-display font-semibold text-sm">Log In</button>
+    </form>
+    <p class="text-xs text-center mt-5" style="color:var(--ink-soft)">Not registered yet? Ask your manager to add you as a rider in the Management Console.</p>
+  </div>
+</div>
+
+<!-- ============================= MAIN APP ============================= -->
+<div id="app-shell" class="app-shell hidden flex-col pb-24">
+  <header class="route-texture" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark));">
+    <div class="px-5 pt-6 pb-5 flex items-center gap-3">
+      <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8"><rect x="1" y="9" width="15" height="9" rx="1.5"/><path d="M16 12h3.5l3.5 3.5V18h-7z"/><circle cx="6" cy="19.5" r="1.8" fill="white"/><circle cx="18" cy="19.5" r="1.8" fill="white"/></svg>
+      </div>
+      <div>
+        <h1 id="header-name" class="font-display text-white text-base font-semibold leading-tight">—</h1>
+        <p id="header-vehicle" class="text-[12px] leading-tight" style="color:rgba(255,255,255,0.75)">—</p>
+      </div>
+      <button id="logout-btn" title="Log out" class="ml-auto w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,255,255,0.35);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============================= PANEL: TODAY'S ROUTE ============================= -->
+  <section id="panel-route" class="panel active px-5 pt-6">
+    <div class="flex items-center justify-between mb-1">
+      <h2 class="font-display text-xl font-semibold">Today's route</h2>
+      <button id="refresh-route-btn" class="text-xs font-semibold px-3 py-1.5 rounded-full" style="background:var(--surface); border:1.5px solid var(--border); color:var(--ink-soft);">↻ Refresh</button>
+    </div>
+    <p class="text-sm mb-5" style="color:var(--ink-soft)">Tap ✓ once a bin is collected.</p>
+
+    <div id="route-empty" class="text-sm text-center py-12" style="color:var(--ink-soft)">No routes assigned for today yet.</div>
+    <div id="route-list" class="space-y-6 hidden"></div>
+  </section>
+
+  <!-- ============================= PANEL: ACTIVITY ============================= -->
+  <section id="panel-activity" class="panel px-5 pt-6">
+    <h2 class="font-display text-xl font-semibold mb-1">Activity</h2>
+    <p class="text-sm mb-5" style="color:var(--ink-soft)">Location, alerts, and offline sync status.</p>
+
+    <div class="rounded-2xl px-5 py-5 mb-5" style="background:var(--surface); border:1.5px solid var(--border);">
+      <h3 class="font-display text-sm font-semibold mb-2">Location</h3>
+      <p id="last-ping-text" class="text-xs mb-3" style="color:var(--ink-soft)">No location shared yet.</p>
+      <button id="ping-location-btn" class="w-full rounded-xl py-2.5 font-display text-sm font-semibold" style="background:var(--teal); color:#fff;">📍 Share my location</button>
+    </div>
+
+    <div class="rounded-2xl px-5 py-5 mb-5" style="background:var(--surface); border:1.5px solid var(--border);">
+      <h3 class="font-display text-sm font-semibold mb-2">Offline sync queue</h3>
+      <p class="text-xs mb-3" style="color:var(--ink-soft)">If an update couldn't reach the platform (no signal), it's queued automatically. Retry it here.</p>
+      <button id="retry-sync-btn" class="w-full rounded-xl py-2.5 font-display text-sm font-semibold" style="background:var(--gold); color:var(--primary-dark);">⟳ Retry pending sync</button>
+      <p id="sync-feedback" class="text-xs mt-2 text-center hidden"></p>
+    </div>
+
+    <h3 class="font-display text-sm font-semibold mb-3 uppercase tracking-wide" style="color:var(--ink-soft)">Recent alerts you raised</h3>
+    <div id="alerts-empty" class="text-sm text-center py-8" style="color:var(--ink-soft)">No alerts raised yet.</div>
+    <div id="alerts-list" class="space-y-2 hidden"></div>
+  </section>
+</div>
+
+<!-- ============================= ALERT MODAL ============================= -->
+<div id="alert-modal" class="fixed inset-0 hidden items-center justify-center z-50 px-5" style="background:rgba(11,59,36,0.45);">
+  <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden">
+    <div class="px-5 py-4" style="border-bottom:1.5px solid var(--border);">
+      <h3 class="font-display text-sm font-semibold">Report an issue</h3>
+    </div>
+    <div class="px-5 py-4 space-y-3">
+      <button type="button" class="alert-type-btn w-full text-left rounded-xl px-4 py-3 text-sm font-medium" data-type="bin_full" style="background:#FFF3D6; color:#9A6B00;">🗑 Bin Full</button>
+      <button type="button" class="alert-type-btn w-full text-left rounded-xl px-4 py-3 text-sm font-medium" data-type="obstruction" style="background:#FBE7E4; color:#B23A26;">🚧 Obstruction</button>
+      <button type="button" class="alert-type-btn w-full text-left rounded-xl px-4 py-3 text-sm font-medium" data-type="other" style="background:#EEF2EE; color:#5A6A5E;">⚠ Other issue</button>
+      <textarea id="alert-message" rows="2" placeholder="Optional note" class="field-input w-full rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+    </div>
+    <div class="px-5 py-4 flex gap-3" style="border-top:1.5px solid var(--border);">
+      <button id="alert-cancel" class="flex-1 rounded-xl py-2.5 text-sm font-semibold" style="background:var(--bg); color:var(--ink-soft);">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= BOTTOM NAV ============================= -->
+<nav id="bottom-nav" class="hidden fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t flex" style="border-color:var(--border);">
+  <button data-tab="route" class="tab-btn flex-1 flex flex-col items-center gap-1 py-3 active">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l-6 3v11l6-3 6 3 6-3V6l-6 3-6-3z"/></svg>
+    <span class="text-[11px] font-medium">Route</span>
+    <span class="tab-dot w-1 h-1 rounded-full" style="background:var(--primary)"></span>
+  </button>
+  <button data-tab="activity" class="tab-btn flex-1 flex flex-col items-center gap-1 py-3">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l2 7 4-14 2 7h6"/></svg>
+    <span class="text-[11px] font-medium">Activity</span>
+    <span class="tab-dot w-1 h-1 rounded-full" style="background:var(--primary)"></span>
+  </button>
+</nav>
+
+<div id="toast" class="toast fixed bottom-24 left-1/2 -translate-x-1/2 w-[90%] max-w-[420px] px-4 py-3 rounded-xl text-sm text-white text-center z-50" style="background:var(--ink);"></div>
+
+<script>
+// ============================================================================
+// app.js (inline) — talks to the Driver Subsystem's REST API only. Never
+// calls the Customer or Management subsystems directly.
+// ============================================================================
+
+const API_BASE_URL = 'http://localhost:4004/api/v1';
+
+// In-memory only — refreshing the page logs you out (same tradeoff as the
+// Customer Subsystem frontend; see its README for the production note).
+const state = { driver: null, alertContext: null };
+
+function $(sel, root = document) { return root.querySelector(sel); }
+function $all(sel, root = document) { return [...root.querySelectorAll(sel)]; }
+
+function showToast(message, isError = false) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.style.background = isError ? 'var(--danger)' : 'var(--ink)';
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(`${API_BASE_URL}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.success === false) {
+    const err = new Error(body?.error?.message || 'Request failed');
+    err.details = body?.error?.details;
+    throw err;
+  }
+  return body.data;
+}
+
+// ============================================================================
+// AUTH
+// ============================================================================
+$('#login-form').addEventListener('submit', async (evt) => {
+  evt.preventDefault();
+  const form = evt.target;
+  const errorEl = $('#login-error');
+  errorEl.classList.add('hidden');
+
+  const btn = $('#login-submit');
+  btn.disabled = true;
+  btn.textContent = 'Logging in…';
+
+  try {
+    const driver = await api('/drivers/login', { method: 'POST', body: JSON.stringify({ phone_number: form.phone_number.value.trim() }) });
+    state.driver = driver;
+    $('#auth-shell').classList.add('hidden');
+    $('#app-shell').classList.remove('hidden');
+    $('#app-shell').classList.add('flex');
+    $('#bottom-nav').classList.remove('hidden');
+    $('#header-name').textContent = driver.full_name;
+    $('#header-vehicle').textContent = driver.vehicle_label || 'No vehicle assigned';
+    showToast(`Welcome, ${driver.full_name.split(' ')[0]}!`);
+    switchTab('route');
+    loadRoutes();
+    loadAlerts();
+  } catch (err) {
+    errorEl.textContent = err.message;
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Log In';
+  }
+});
+
+$('#logout-btn').addEventListener('click', () => {
+  state.driver = null;
+  $('#app-shell').classList.add('hidden');
+  $('#app-shell').classList.remove('flex');
+  $('#bottom-nav').classList.add('hidden');
+  $('#auth-shell').classList.remove('hidden');
+  $('#login-form').reset();
+  showToast('Logged out.');
+});
+
+// ============================================================================
+// TABS
+// ============================================================================
+function switchTab(tab) {
+  $all('.panel').forEach(p => p.classList.remove('active'));
+  $(`#panel-${tab}`).classList.add('active');
+  $all('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+}
+$all('.tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+// ============================================================================
+// TODAY'S ROUTE — the check button lives here
+// ============================================================================
+async function loadRoutes() {
+  if (!state.driver) return;
+  try {
+    const routes = await api(`/routes/${state.driver.driver_id}`);
+    const empty = $('#route-empty');
+    const list = $('#route-list');
+
+    if (!routes.length) {
+      empty.classList.remove('hidden');
+      list.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    list.classList.remove('hidden');
+
+    list.innerHTML = routes.map(route => `
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-display text-sm font-semibold">${route.route_name}</h3>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded-full" style="background:var(--bg); color:var(--ink-soft);">${route.neighborhood_tags.join(', ')}</span>
+        </div>
+        <div class="space-y-2">
+          ${route.tasks.map(task => taskCardHtml(task)).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    $all('.check-btn', list).forEach(btn => btn.addEventListener('click', () => handleCheck(btn.dataset.taskId, btn.dataset.done === 'true')));
+    $all('.issue-btn', list).forEach(btn => btn.addEventListener('click', () => updateTaskStatus(btn.dataset.taskId, btn.dataset.status)));
+    $all('.alert-open-btn', list).forEach(btn => btn.addEventListener('click', () => openAlertModal({ taskId: btn.dataset.taskId, routeId: btn.dataset.routeId })));
+  } catch (err) {
+    showToast(`Could not load routes (${err.message})`, true);
+  }
+}
+$('#refresh-route-btn').addEventListener('click', loadRoutes);
+
+function taskCardHtml(task) {
+  const done = task.status === 'completed' || task.status === 'bin_cleared';
+  return `
+    <div class="task-card rounded-xl px-4 py-3 ${done ? 'done' : ''}">
+      <div class="flex items-start gap-3">
+        <button class="check-btn ${done ? 'done' : ''} w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-bold" data-task-id="${task.task_id}" data-done="${done}">
+          ${done ? '✓' : ''}
+        </button>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium">${task.address_snapshot}</p>
+          <p class="text-xs mt-0.5" style="color:var(--ink-soft)">${task.neighborhood_tag}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="status-pill status-${task.status}">${task.status.replace('_', ' ')}</span>
+          </div>
+        </div>
+      </div>
+      ${done ? '' : `
+      <div class="flex gap-2 mt-3">
+        <button class="issue-btn flex-1 text-xs font-medium py-2 rounded-lg" data-task-id="${task.task_id}" data-status="delayed" style="background:#FFF3D6; color:#9A6B00;">Delayed</button>
+        <button class="issue-btn flex-1 text-xs font-medium py-2 rounded-lg" data-task-id="${task.task_id}" data-status="inaccessible" style="background:#FBE7E4; color:#B23A26;">Inaccessible</button>
+        <button class="alert-open-btn flex-1 text-xs font-medium py-2 rounded-lg" data-task-id="${task.task_id}" data-route-id="${task.route_id}" style="background:var(--bg); color:var(--ink-soft);">🚨 Report</button>
+      </div>`}
+    </div>
+  `;
+}
+
+async function handleCheck(taskId, alreadyDone) {
+  if (alreadyDone) return; // already collected — nothing to do
+  await updateTaskStatus(taskId, 'completed');
+}
+
+async function updateTaskStatus(taskId, status) {
+  try {
+    await api(`/tasks/${taskId}/status`, { method: 'PATCH', body: JSON.stringify({ status, driver_id: state.driver.driver_id }) });
+    const label = status === 'completed' ? 'Marked collected — customer notified.' : `Marked ${status}.`;
+    showToast(label);
+    loadRoutes();
+  } catch (err) {
+    showToast(`Could not update task (${err.message})`, true);
+  }
+}
+
+// ============================================================================
+// ALERTS (bin_full / obstruction / other)
+// ============================================================================
+function openAlertModal(context) {
+  state.alertContext = context;
+  $('#alert-message').value = '';
+  $('#alert-modal').classList.remove('hidden');
+  $('#alert-modal').classList.add('flex');
+}
+function closeAlertModal() {
+  $('#alert-modal').classList.add('hidden');
+  $('#alert-modal').classList.remove('flex');
+  state.alertContext = null;
+}
+$('#alert-cancel').addEventListener('click', closeAlertModal);
+$all('.alert-type-btn').forEach(btn => btn.addEventListener('click', async () => {
+  const alertType = btn.dataset.type;
+  const message = $('#alert-message').value.trim() || null;
+  const ctx = state.alertContext || {};
+  try {
+    await api('/alerts', {
+      method: 'POST',
+      body: JSON.stringify({ driver_id: state.driver.driver_id, task_id: ctx.taskId || null, route_id: ctx.routeId || null, alert_type: alertType, message }),
+    });
+    showToast('Alert reported.');
+    closeAlertModal();
+    loadAlerts();
+  } catch (err) {
+    showToast(`Could not report alert (${err.message})`, true);
+  }
+}));
+
+async function loadAlerts() {
+  if (!state.driver) return;
+  try {
+    const alerts = await api(`/alerts/${state.driver.driver_id}`);
+    const empty = $('#alerts-empty');
+    const list = $('#alerts-list');
+    if (!alerts.length) {
+      empty.classList.remove('hidden');
+      list.classList.add('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+    list.classList.remove('hidden');
+    list.innerHTML = alerts.map(a => `
+      <div class="rounded-xl px-4 py-3" style="background:var(--surface); border:1.5px solid var(--border);">
+        <p class="text-sm font-medium capitalize">${a.alert_type.replace('_', ' ')}</p>
+        ${a.message ? `<p class="text-xs mt-0.5" style="color:var(--ink-soft)">${a.message}</p>` : ''}
+        <p class="text-xs font-mono mt-1" style="color:var(--ink-soft)">${new Date(a.dispatched_at).toLocaleString()}</p>
+      </div>
+    `).join('');
+  } catch (err) {
+    showToast('Could not load alerts.', true);
+  }
+}
+
+// ============================================================================
+// LOCATION PING
+// ============================================================================
+$('#ping-location-btn').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    showToast('Location is not available in this browser.', true);
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    try {
+      await api('/locations', { method: 'POST', body: JSON.stringify({ driver_id: state.driver.driver_id, latitude, longitude }) });
+      $('#last-ping-text').textContent = `Last shared: ${new Date().toLocaleTimeString()} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})`;
+      showToast('Location shared.');
+    } catch (err) {
+      showToast(`Could not share location (${err.message})`, true);
+    }
+  }, () => showToast('Location permission denied.', true));
+});
+
+// ============================================================================
+// OFFLINE SYNC RETRY
+// ============================================================================
+$('#retry-sync-btn').addEventListener('click', async () => {
+  const feedback = $('#sync-feedback');
+  feedback.classList.add('hidden');
+  try {
+    const result = await api(`/sync/pending/${state.driver.driver_id}`);
+    feedback.textContent = `Retried ${result.results.length} queued item(s).`;
+    feedback.style.color = 'var(--primary)';
+    feedback.classList.remove('hidden');
+    showToast('Sync retried.');
+  } catch (err) {
+    feedback.textContent = err.message;
+    feedback.style.color = 'var(--danger)';
+    feedback.classList.remove('hidden');
+  }
+});
+</script>
+</body>
+</html>
