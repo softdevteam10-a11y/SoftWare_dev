@@ -456,11 +456,14 @@ $('#refresh-btn').addEventListener('click', () => {
 // ============================================================================
 async function loadAnalytics() {
   try {
-    const data = await api('/analytics/overview');
-    const unavailableBanner = $('#analytics-unavailable');
+    const rawResponse = await api('/analytics/overview');
 
+    // Fallback if the endpoint returns null, empty, or a wrapped { data: ... } object
+    const data = rawResponse?.data || rawResponse || {};
     const kpis = data.kpis || {};
     const tokensByNeighborhood = data.tokens_by_neighborhood || [];
+
+    const unavailableBanner = $('#analytics-unavailable');
 
     if (!data.available) {
       unavailableBanner.classList.remove('hidden');
@@ -469,21 +472,22 @@ async function loadAnalytics() {
       unavailableBanner.classList.add('hidden');
     }
 
-    $('#kpi-tokens').textContent = data.kpis?.total_tokens_redeemed?.value ?? '-';
-    $('#kpi-customers').textContent = data.kpis?.total_registered_customers?.value ?? '-';
-    $('#kpi-exceptions').textContent = data.kpis?.pending_or_failed_transactions?.value ?? '-';
-    $('#kpi-compliance').textContent = data.kpis?.compliance_log_entries?.value ?? '-';
+    // Safely assign KPIs using optional chaining
+    $('#kpi-tokens').textContent = kpis.total_tokens_redeemed?.value ?? '-';
+    $('#kpi-customers').textContent = kpis.total_registered_customers?.value ?? '-';
+    $('#kpi-exceptions').textContent = kpis.pending_or_failed_transactions?.value ?? '-';
+    $('#kpi-compliance').textContent = kpis.compliance_log_entries?.value ?? '-';
 
     const chart = $('#volume-chart');
     const empty = $('#volume-chart-empty');
 
-  if (!tokensByNeighborhood.length) {
-    chart.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
-
-  empty.classList.add('hidden');
+    if (!tokensByNeighborhood.length) {
+      chart.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+}
+  
+empty.classList.add('hidden');
 
   const max = Math.max(1, ...tokensByNeighborhood.map(v => v.tokens));
       chart.innerHTML = data.tokens_by_neighborhood.map(v => `
