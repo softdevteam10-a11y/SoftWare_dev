@@ -8,6 +8,12 @@ router.get('/aggregate', async (req, res) => {
     const tokenResult = await db.query('SELECT COALESCE(SUM(quantity), 0)::int AS total_tokens FROM transactions WHERE status = $1', ['completed']);
     const customerResult = await db.query('SELECT COUNT(*)::int AS total_customers FROM customers');
 
+    // Update 'customer_profiles' to match your exact Neon table name
+    const customerResult = await db.query(
+      `SELECT COUNT(*)::int AS total_customers FROM customer_subscriptions`
+    );
+
+
     res.json({
       success: true,
       data: {
