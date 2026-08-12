@@ -45,7 +45,7 @@ router.get('/overview', async (req, res) => {
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     const response = await fetch(targetUrl, { signal: controller.signal });
     clearTimeout(timeoutId);
