@@ -14,6 +14,36 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 const router = express.Router();
 
+// In-memory array so newly created riders persist and show in dropdowns
+const mockDrivers = [
+  { id: 'drv-001', full_name: 'Sheriff Oki', phone_number: '+23276000001', vehicle_label: 'Truck Alpha', status: 'active' },
+  { id: 'drv-002', full_name: 'Abdul Bangura', phone_number: '+23276000002', vehicle_label: 'Van Beta', status: 'active' }
+];
+
+/** POST /login (or /drivers/login) - Handle Driver Login */
+router.post('/login', async (req, res) => {
+  const { phone_number } = req.body || {};
+  const driver = mockDrivers.find(d => d.phone_number === phone_number) || mockDrivers[0];
+
+  return sendSuccess(res, {
+    message: 'Driver logged in successfully.',
+    token: 'mock-driver-jwt-token-12345',
+    driver
+  });
+});
+
+/** POST /drivers/login - Direct path fallback for login */
+router.post('/drivers/login', async (req, res) => {
+  const { phone_number } = req.body || {};
+  const driver = mockDrivers.find(d => d.phone_number === phone_number) || mockDrivers[0];
+
+  return sendSuccess(res, {
+    message: 'Driver logged in successfully.',
+    token: 'mock-driver-jwt-token-12345',
+    driver
+  });
+});
+
 const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || process.env.CUSTOMER_SERVICE_URL || 'https://salone-clean-customer-backend.onrender.com';
 const CLEAN_BASE_URL = GATEWAY_BASE_URL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
 
