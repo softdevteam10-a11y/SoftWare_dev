@@ -44,13 +44,7 @@ router.get('/riders', async (req, res) => {
 });
 
 /** POST /api/v1/fleet/riders — "Add Rider", forwarded via the Gateway to the Driver Subsystem */
-router.post('/riders', async (req, res) => {
-  const { full_name, phone_number, vehicle_label } = req.body || {};
-  if (!full_name || !phone_number) {
-    return sendError(res, { statusCode: 422, code: 'VALIDATION_ERROR', message: 'full_name and phone_number are required.' });
-  }
-
-  /** POST /api/v1/fleet/riders – "Add Rider" */
+/** POST /api/v1/fleet/riders – "Add Rider" */
 router.post('/riders', async (req, res) => {
   const { full_name, phone_number, vehicle_label } = req.body || {};
   if (!full_name || !phone_number) {
