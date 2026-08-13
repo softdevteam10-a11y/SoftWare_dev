@@ -9,26 +9,15 @@
 
 const { Pool } = require('pg');
 
-const connectionString = process.env.DATABASE_URL;
-
-const pool = new Pool(
-  connectionString
-    ? {
-        connectionString,
-        ssl: { rejectUnauthorized: false }, // Required for cloud hosting
-        max: 10,
-        idleTimeoutMillis: 30000,
-      }
-    : {
-        host: process.env.PGHOST || 'localhost',
-        port: Number(process.env.PGPORT) || 5432,
-        database: process.env.PGDATABASE || 'salone_clean_customers',
-        user: process.env.PGUSER || 'customer_service',
-        password: process.env.PGPASSWORD || '',
-        max: 10,
-        idleTimeoutMillis: 30000,
-      }
-);
+const pool = new Pool({
+  host: process.env.PGHOST || 'localhost',
+  port: Number(process.env.PGPORT) || 5432,
+  database: process.env.PGDATABASE || 'salone_clean_customers',
+  user: process.env.PGUSER || 'customer_service',
+  password: process.env.PGPASSWORD || '',
+  max: 10,
+  idleTimeoutMillis: 30000,
+});
 
 pool.on('error', (err) => {
   // A background/idle client hit an error — log and let the process

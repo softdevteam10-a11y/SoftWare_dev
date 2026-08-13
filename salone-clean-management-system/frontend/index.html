@@ -383,16 +383,7 @@
 // the backend is the one that reaches the API Gateway for any dispatch.
 // ============================================================================
 
-// 1. Define your backend base URL in one central place
-const API_BASE_URL = 'https://salone-clean-management-backend.onrender.com/api/v1';
-
-// 2. Helper function to ensure all endpoints use the correct base URL
-async function apiFetch(endpoint, options = {}) {
-  // Automatically prepends /api and strips double slashes if needed
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const response = await fetch(`${API_BASE_URL}${cleanEndpoint}`, options);
-  return response;
-}
+const API_BASE_URL = 'http://localhost:4002/api/v1';
 
 // In-memory-only session state (no localStorage — see Customer Subsystem
 // frontend for the same note). A production build would use a real admin
@@ -456,13 +447,7 @@ $('#refresh-btn').addEventListener('click', () => {
 // ============================================================================
 async function loadAnalytics() {
   try {
-    const rawResponse = await api('/analytics/overview');
-
-    // Fallback if the endpoint returns null, empty, or a wrapped { data: ... } object
-    const data = rawResponse?.data || rawResponse || {};
-    const kpis = data.kpis || {};
-    const tokensByNeighborhood = data.tokens_by_neighborhood || [];
-
+    const data = await api('/analytics/overview');
     const unavailableBanner = $('#analytics-unavailable');
 
     if (!data.available) {
@@ -472,25 +457,22 @@ async function loadAnalytics() {
       unavailableBanner.classList.add('hidden');
     }
 
-    // Safely assign KPIs using optional chaining
-    $('#kpi-tokens').textContent = kpis.total_tokens_redeemed?.value ?? '-';
-    $('#kpi-customers').textContent = kpis.total_registered_customers?.value ?? '-';
-    $('#kpi-exceptions').textContent = kpis.pending_or_failed_transactions?.value ?? '-';
-    $('#kpi-compliance').textContent = kpis.compliance_log_entries?.value ?? '-';
+    $('#kpi-tokens').textContent = data.kpis.total_tokens_redeemed.value ?? '—';
+    $('#kpi-customers').textContent = data.kpis.total_registered_customers.value ?? '—';
+    $('#kpi-exceptions').textContent = data.kpis.pending_or_failed_transactions.value ?? '—';
+    $('#kpi-compliance').textContent = data.kpis.compliance_log_entries.value;
 
     const chart = $('#volume-chart');
     const empty = $('#volume-chart-empty');
-
-    if (!tokensByNeighborhood.length) {
+    if (!data.tokens_by_neighborhood.length) {
       chart.innerHTML = '';
       empty.classList.remove('hidden');
       return;
-}
-  
-empty.classList.add('hidden');
+    }
+    empty.classList.add('hidden');
 
-  const max = Math.max(1, ...tokensByNeighborhood.map(v => v.tokens));
-      chart.innerHTML = data.tokens_by_neighborhood.map(v => `
+    const max = Math.max(1, ...data.tokens_by_neighborhood.map(v => v.tokens));
+    chart.innerHTML = data.tokens_by_neighborhood.map(v => `
       <div>
         <div class="flex items-center justify-between text-xs mb-1">
           <span class="font-medium">${v.neighborhood}</span>

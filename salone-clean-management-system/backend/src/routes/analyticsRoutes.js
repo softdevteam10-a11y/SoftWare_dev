@@ -11,69 +11,55 @@
 // filling the gap with a fake number.
 // ============================================================================
 
-// ============================================================================
-// analyticsRoutes.js — Panel 1: Global Operational Analytics Dashboard
-// ============================================================================
-
 const express = require('express');
+const fetch = require('node-fetch');
 const { query } = require('../db');
-const { sendSuccess } = require('../utils/apiResponse');
+const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || process.env.CUSTOMER_SERVICE_URL || 'https://salone-clean-customer-backend.onrender.com';
-const CLEAN_BASE_URL = GATEWAY_BASE_URL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || 'https://gateway.saloneclean.sl/api/v1';
 
 /**
  * GET /api/v1/analytics/overview
  * Panel 1 — KPI cards + neighborhood volume bar-chart data, all real.
  */
 router.get('/overview', async (req, res) => {
-  let complianceLogCount = 0;
-  try {
-    const complianceCountResult = await query(`SELECT COUNT(*)::int AS count FROM system_compliance_logs`);
-    complianceLogCount = complianceCountResult.rows[0]?.count ?? 0;
-  } catch (err) {
-    console.error('Compliance log query error:', err.message);
-  }
+  // The one figure this subsystem can speak to authoritatively on its own:
+  // how much administrative/compliance activity has occurred locally.
+  const complianceCountResult = await query(`SELECT COUNT(*)::int AS count FROM system_compliance_logs`);
+  const complianceLogCount = complianceCountResult.rows[0]?.count ?? 0;
 
   let customerSummary = null;
   let gatewayError = null;
 
-  // FIX: Explicitly target /api/v1/analytics/aggregate using CLEAN_BASE_URL
-  const targetUrl = `${CLEAN_BASE_URL}/api/v1/analytics/aggregate`;
-
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-    const response = await fetch(targetUrl, { signal: controller.signal });
-    clearTimeout(timeoutId);
-
+    const response = await fetch(`${GATEWAY_BASE_URL}/analytics/aggregate`, { timeout: 5000 });
     const body = await response.json();
-
     if (response.ok && body?.success) {
       customerSummary = body.data;
     } else {
       gatewayError = body?.error?.message || `Gateway returned ${response.status}`;
     }
   } catch (err) {
-    console.error(`Failed to reach customer subsystem at ${targetUrl}:`, err.message);
     gatewayError = err.message;
   }
 
   const available = customerSummary !== null;
 
   return sendSuccess(res, {
-    available,
-    gateway_error: gatewayError,
-    kpis: {
-      total_tokens_redeemed: { value: available ? (customerSummary?.total_tokens_redeemed ?? 0) : null },
-      total_registered_customers: { value: available ? (customerSummary?.total_registered_customers ?? customerSummary?.total_customers ?? 0) : null },
-      pending_or_failed_transactions: { value: available ? (customerSummary?.pending_or_failed_transactions ?? 0) : null },
-      compliance_log_entries: { value: complianceLogCount }
+    data: {
+      available, // false means the cards below should show an "unavailable" state, not a guess
+      gateway_error: gatewayError,
+      kpis: {
+        total_tokens_redeemed: { value: available ? customerSummary.total_tokens_redeemed : null },
+        total_registered_customers: { value: available ? customerSummary.total_customers : null },
+        pending_or_failed_transactions: { value: available ? customerSummary.pending_or_failed_transactions : null },
+        compliance_log_entries: { value: complianceLogCount },
+      },
+      tokens_by_neighborhood: available ? customerSummary.tokens_by_neighborhood : [],
+      currency: 'SLE',
     },
-    tokens_by_neighborhood: customerSummary?.tokens_by_neighborhood || customerSummary?.neighborhoods || []
   });
 });
 

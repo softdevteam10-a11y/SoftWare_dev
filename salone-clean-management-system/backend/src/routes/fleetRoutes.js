@@ -14,67 +14,22 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
 
 const router = express.Router();
 
-// In-memory array so newly created riders persist and show in dropdowns
-const mockDrivers = [
-  { id: 'drv-001', full_name: 'Sheriff Oki', phone_number: '+23276000001', vehicle_label: 'Truck Alpha', status: 'active' },
-  { id: 'drv-002', full_name: 'Abdul Bangura', phone_number: '+23276000002', vehicle_label: 'Van Beta', status: 'active' }
-];
+const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || 'https://gateway.saloneclean.sl/api/v1';
 
-/** POST /login (or /drivers/login) - Handle Driver Login */
-router.post('/login', async (req, res) => {
-  const { phone_number } = req.body || {};
-  const driver = mockDrivers.find(d => d.phone_number === phone_number) || mockDrivers[0];
-
-  return sendSuccess(res, {
-    message: 'Driver logged in successfully.',
-    token: 'mock-driver-jwt-token-12345',
-    driver
-  });
-});
-
-/** POST /drivers/login - Direct path fallback for login */
-router.post('/drivers/login', async (req, res) => {
-  const { phone_number } = req.body || {};
-  const driver = mockDrivers.find(d => d.phone_number === phone_number) || mockDrivers[0];
-
-  return sendSuccess(res, {
-    message: 'Driver logged in successfully.',
-    token: 'mock-driver-jwt-token-12345',
-    driver
-  });
-});
-
-const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || process.env.CUSTOMER_SERVICE_URL || 'https://salone-clean-customer-backend.onrender.com';
-const CLEAN_BASE_URL = GATEWAY_BASE_URL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
-
-/** GET /api/v1/fleet/riders – list riders (drivers) */
+/** GET /api/v1/fleet/riders — list riders (drivers) via the Gateway */
 router.get('/riders', async (req, res) => {
   try {
-    const gatewayUrl = process.env.API_GATEWAY_BASE_URL || process.env.CUSTOMER_SERVICE_URL;
-    
-    // If no gateway is configured or available, return an empty array gracefully
-    if (!gatewayUrl) {
-      return sendSuccess(res, { data: [] });
-    }
-
-    const response = await fetch(`${gatewayUrl.replace(/\/$/, '')}/drivers`, { timeout: 5000 });
-    
-    if (!response.ok) {
-      // Graceful fallback if driver subsystem route is missing/unreachable
-      return sendSuccess(res, { data: [] });
-    }
-
+    const response = await fetch(`${GATEWAY_BASE_URL}/drivers`);
     const body = await response.json();
-    return sendSuccess(res, { data: body.data || [] });
+    if (!response.ok) throw new Error(body?.error?.message || `Gateway returned ${response.status}`);
+    return sendSuccess(res, { data: body.data });
   } catch (err) {
-    console.error('[fleetRoutes] list riders fallback triggered:', err.message);
-    // Return empty array instead of 502 error so frontend loads smoothly
-    return sendSuccess(res, { data: [] });
+    console.error('[fleetRoutes] list riders failed', err);
+    return sendError(res, { statusCode: 502, code: 'GATEWAY_ERROR', message: `Could not load riders via the Gateway (${err.message}).` });
   }
 });
 
 /** POST /api/v1/fleet/riders — "Add Rider", forwarded via the Gateway to the Driver Subsystem */
-/** POST /api/v1/fleet/riders – "Add Rider" */
 router.post('/riders', async (req, res) => {
   const { full_name, phone_number, vehicle_label } = req.body || {};
   if (!full_name || !phone_number) {
@@ -82,44 +37,32 @@ router.post('/riders', async (req, res) => {
   }
 
   try {
-    const targetUrl = `${CLEAN_BASE_URL}/api/v1/drivers`;
-    const response = await fetch(targetUrl, {
+    const response = await fetch(`${GATEWAY_BASE_URL}/drivers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ full_name, phone_number, vehicle_label: vehicle_label || null }),
-      timeout: 5000
     });
-
     const body = await response.json();
     if (!response.ok) {
-      // Fallback mock creation if endpoint doesn't exist on backend
-      return sendSuccess(res, { statusCode: 201, message: 'Rider added (offline mode).', data: { id: Date.now(), full_name, phone_number, vehicle_label } });
+      return sendError(res, { statusCode: response.status, code: body?.error?.code || 'GATEWAY_ERROR', message: body?.error?.message || 'Could not add rider.', details: body?.error?.details });
     }
-
     return sendSuccess(res, { statusCode: 201, message: body.message || 'Rider added.', data: body.data });
   } catch (err) {
-    console.error('[fleetRoutes] add rider fallback:', err.message);
-    // Graceful response so the UI doesn't crash with a red alert box
-    return sendSuccess(res, { statusCode: 201, message: 'Rider added locally.', data: { id: Date.now(), full_name, phone_number, vehicle_label } });
+    console.error('[fleetRoutes] add rider failed', err);
+    return sendError(res, { statusCode: 502, code: 'GATEWAY_ERROR', message: `Could not reach the Gateway to add this rider (${err.message}).` });
   }
 });
 
-/** GET /api/v1/fleet/customers – list customers for route builder */
+/** GET /api/v1/fleet/customers — list customers via the Gateway, for the route-builder's stop picker */
 router.get('/customers', async (req, res) => {
   try {
-    const targetUrl = `${CLEAN_BASE_URL}/api/v1/customers/list`;
-    const response = await fetch(targetUrl, { timeout: 5000 });
+    const response = await fetch(`${GATEWAY_BASE_URL}/customers/list`);
     const body = await response.json();
-
-    if (!response.ok) {
-      return sendSuccess(res, { data: [] });
-    }
-
-    return sendSuccess(res, { data: body.data || [] });
+    if (!response.ok) throw new Error(body?.error?.message || `Gateway returned ${response.status}`);
+    return sendSuccess(res, { data: body.data });
   } catch (err) {
-    console.error('[fleetRoutes] list customers fallback:', err.message);
-    // Return empty list gracefully instead of throwing 502/404 errors
-    return sendSuccess(res, { data: [] });
+    console.error('[fleetRoutes] list customers failed', err);
+    return sendError(res, { statusCode: 502, code: 'GATEWAY_ERROR', message: `Could not load customers via the Gateway (${err.message}).` });
   }
 });
 

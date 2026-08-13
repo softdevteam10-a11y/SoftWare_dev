@@ -28,12 +28,6 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/compliance', complianceRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/fleet', fleetRoutes);
-app.use('/api/v1/drivers', fleetRoutes); // Alias for drivers
-app.use('/drivers', fleetRoutes);        // Direct alias fallback
-app.use('/api/v1/fleet', fleetRoutes);
-app.use('/api/v1/drivers', fleetRoutes);
-app.use('/drivers', fleetRoutes); // Catches direct POST /drivers/login requests
-
 
 // --- 404 fallback ------------------------------------------------------------
 app.use((req, res) => {
