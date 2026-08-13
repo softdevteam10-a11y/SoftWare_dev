@@ -17,6 +17,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { CROSS_SERVICE_TIMEOUT_MS } = require('../utils/timeouts');
 
 const router = express.Router();
 
@@ -57,6 +58,7 @@ router.post('/initialize', async (req, res) => {
         status: outcomeStatus,
         gateway_reference: reference,
       }),
+      timeout: CROSS_SERVICE_TIMEOUT_MS,
     });
     if (!webhookResponse.ok) {
       console.error(`[mock-gateway] Customer Subsystem webhook returned ${webhookResponse.status}`);

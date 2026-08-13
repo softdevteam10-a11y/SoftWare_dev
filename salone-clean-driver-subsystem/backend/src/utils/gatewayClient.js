@@ -31,7 +31,7 @@ async function postToGateway(gatewayPath, payload) {
         'X-Origin-Subsystem': 'driver-subsystem',
       },
       body: JSON.stringify(payload),
-      timeout: 8000,
+      timeout: 45000, // generous headroom for Render free-tier cold starts on the downstream service
     });
 
     let body = {};

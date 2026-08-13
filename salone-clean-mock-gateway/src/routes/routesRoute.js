@@ -12,6 +12,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { CROSS_SERVICE_TIMEOUT_MS } = require('../utils/timeouts');
 
 const router = express.Router();
 
@@ -43,6 +44,7 @@ router.post('/broadcast', async (req, res) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...config_payload, source_dispatch_id: dispatchId }),
+        timeout: CROSS_SERVICE_TIMEOUT_MS,
       });
       const ingestBody = await ingestResponse.json().catch(() => ({}));
 

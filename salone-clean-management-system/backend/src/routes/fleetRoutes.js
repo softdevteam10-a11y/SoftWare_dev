@@ -16,10 +16,16 @@ const router = express.Router();
 
 const GATEWAY_BASE_URL = process.env.API_GATEWAY_BASE_URL || 'https://gateway.saloneclean.sl/api/v1';
 
+// Render's free tier spins down idle services; the first request after a
+// period of inactivity can take 30-50 seconds to wake one back up. Without
+// a generous timeout here, a cold Driver or Customer Subsystem looks
+// identical to "genuinely unreachable" from Management's point of view.
+const CROSS_SERVICE_TIMEOUT_MS = 45000;
+
 /** GET /api/v1/fleet/riders — list riders (drivers) via the Gateway */
 router.get('/riders', async (req, res) => {
   try {
-    const response = await fetch(`${GATEWAY_BASE_URL}/drivers`);
+    const response = await fetch(`${GATEWAY_BASE_URL}/drivers`, { timeout: CROSS_SERVICE_TIMEOUT_MS });
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || `Gateway returned ${response.status}`);
     return sendSuccess(res, { data: body.data });
@@ -41,6 +47,7 @@ router.post('/riders', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ full_name, phone_number, vehicle_label: vehicle_label || null }),
+      timeout: CROSS_SERVICE_TIMEOUT_MS,
     });
     const body = await response.json();
     if (!response.ok) {
@@ -56,7 +63,7 @@ router.post('/riders', async (req, res) => {
 /** GET /api/v1/fleet/customers — list customers via the Gateway, for the route-builder's stop picker */
 router.get('/customers', async (req, res) => {
   try {
-    const response = await fetch(`${GATEWAY_BASE_URL}/customers/list`);
+    const response = await fetch(`${GATEWAY_BASE_URL}/customers/list`, { timeout: CROSS_SERVICE_TIMEOUT_MS });
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || `Gateway returned ${response.status}`);
     return sendSuccess(res, { data: body.data });

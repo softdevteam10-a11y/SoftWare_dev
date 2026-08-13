@@ -14,6 +14,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { sendSuccess } = require('../utils/apiResponse');
+const { CROSS_SERVICE_TIMEOUT_MS } = require('../utils/timeouts');
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.post('/task-status', async (req, res) => {
           message: notes ? `Collection completed. Note from the crew: ${notes}` : 'Your collection crew just cleared your bin.',
           source_subsystem: 'driver-subsystem',
         }),
+        timeout: CROSS_SERVICE_TIMEOUT_MS,
       });
       if (!notifResponse.ok) {
         console.error('[mock-gateway] Customer Subsystem rejected the notification (unknown customer_reference?)');

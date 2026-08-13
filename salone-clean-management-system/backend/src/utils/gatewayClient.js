@@ -29,7 +29,7 @@ async function postToGateway(gatewayPath, payload) {
         'X-Origin-Subsystem': 'management-subsystem',
       },
       body: JSON.stringify(payload),
-      timeout: 10000,
+      timeout: 45000, // generous headroom for Render free-tier cold starts on the downstream service
     });
 
     let body = {};

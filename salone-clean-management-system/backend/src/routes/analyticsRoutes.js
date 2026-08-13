@@ -34,7 +34,7 @@ router.get('/overview', async (req, res) => {
   let gatewayError = null;
 
   try {
-    const response = await fetch(`${GATEWAY_BASE_URL}/analytics/aggregate`, { timeout: 5000 });
+    const response = await fetch(`${GATEWAY_BASE_URL}/analytics/aggregate`, { timeout: 45000 }); // was 5000 — too short to survive a Render cold start
     const body = await response.json();
     if (response.ok && body?.success) {
       customerSummary = body.data;

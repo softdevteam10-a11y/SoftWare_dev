@@ -14,6 +14,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { CROSS_SERVICE_TIMEOUT_MS } = require('../utils/timeouts');
 
 const router = express.Router();
 
@@ -21,7 +22,7 @@ const CUSTOMER_SUBSYSTEM_BASE_URL = process.env.CUSTOMER_SUBSYSTEM_BASE_URL || '
 
 router.get('/aggregate', async (req, res) => {
   try {
-    const response = await fetch(`${CUSTOMER_SUBSYSTEM_BASE_URL}/customers/aggregate/summary`);
+    const response = await fetch(`${CUSTOMER_SUBSYSTEM_BASE_URL}/customers/aggregate/summary`, { timeout: CROSS_SERVICE_TIMEOUT_MS });
     const body = await response.json();
 
     if (!response.ok || !body.success) {

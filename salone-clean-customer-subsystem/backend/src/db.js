@@ -5,16 +5,38 @@
 // database (see schema.sql). It is never pointed at the Driver or
 // Management subsystems' databases. Any data this service needs from them
 // is fetched over HTTP through the API Gateway (see utils/gatewayClient.js).
+//
+// Two ways to configure this, so the same code works locally and on Render:
+//   1. DATABASE_URL — a single Postgres connection string, e.g. Neon's
+//      "postgres://user:pass@host/dbname?sslmode=require". If this is set,
+//      it takes priority and SSL is enabled automatically (Neon requires it).
+//   2. Discrete PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD — used for local
+//      Postgres. Set PGSSL=true alongside these if that database also
+//      requires SSL (e.g. a managed Postgres that isn't Neon).
 // ============================================================================
 
 const { Pool } = require('pg');
 
+function buildPoolConfig() {
+  if (process.env.DATABASE_URL) {
+    return {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // Neon (and most managed Postgres) requires SSL
+    };
+  }
+
+  return {
+    host: process.env.PGHOST || 'localhost',
+    port: Number(process.env.PGPORT) || 5432,
+    database: process.env.PGDATABASE || 'salone_clean_customers',
+    user: process.env.PGUSER || 'customer_service',
+    password: process.env.PGPASSWORD || '',
+    ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
+  };
+}
+
 const pool = new Pool({
-  host: process.env.PGHOST || 'localhost',
-  port: Number(process.env.PGPORT) || 5432,
-  database: process.env.PGDATABASE || 'salone_clean_customers',
-  user: process.env.PGUSER || 'customer_service',
-  password: process.env.PGPASSWORD || '',
+  ...buildPoolConfig(),
   max: 10,
   idleTimeoutMillis: 30000,
 });

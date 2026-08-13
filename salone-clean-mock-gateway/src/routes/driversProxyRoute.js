@@ -8,6 +8,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { CROSS_SERVICE_TIMEOUT_MS } = require('../utils/timeouts');
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ const DRIVER_SUBSYSTEM_BASE_URL = process.env.DRIVER_SUBSYSTEM_BASE_URL || 'http
 
 router.get('/', async (req, res) => {
   try {
-    const response = await fetch(`${DRIVER_SUBSYSTEM_BASE_URL}/drivers`);
+    const response = await fetch(`${DRIVER_SUBSYSTEM_BASE_URL}/drivers`, { timeout: CROSS_SERVICE_TIMEOUT_MS });
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || `Driver Subsystem returned ${response.status}`);
     return sendSuccess(res, { data: body.data });
@@ -31,6 +32,7 @@ router.post('/', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body),
+      timeout: CROSS_SERVICE_TIMEOUT_MS,
     });
     const body = await response.json();
     if (!response.ok) {
